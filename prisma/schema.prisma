@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Una cuenta puede administrar una o varias barberías.
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+}
+
+enum Role {
+  OWNER
+  STAFF
+}
+
+model Membership {
+  userId String
+  shopId String
+  role   Role   @default(OWNER)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@id([userId, shopId])
+}
+
+model Shop {
+  id                String        @id @default(cuid())
+  slug              String        @unique
+  name              String
+  timezone          String        @default("America/Bogota")
+  // ISO 4217; los precios se guardan en la unidad mínima (centavos)
+  currency          String        @default("COP")
+  // Prefijo telefónico por defecto para normalizar números locales
+  countryCode       String        @default("57")
+  phone             String?
+  address           String?
+  // Cada cuántos minutos se ofrece un turno (15 → 9:00, 9:15, 9:30...)
+  slotMinutes       Int           @default(15)
+  // Antelación mínima para reservar, en minutos
+  leadTimeMinutes   Int           @default(60)
+  // Hasta cuántos días hacia adelante se puede reservar
+  bookingWindowDays Int           @default(30)
+  // Cuántas horas antes de la cita se envía el recordatorio
+  reminderHours     Int           @default(24)
+  createdAt         DateTime      @default(now())
+  memberships       Membership[]
+  barbers           Barber[]
+  services          Service[]
+  customers         Customer[]
+  appointments      Appointment[]
+}
+
+model Barber {
+  id           String         @id @default(cuid())
+  shopId       String
+  name         String
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  shop         Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workingHours WorkingHours[]
+  timeOff      TimeOff[]
+  appointments Appointment[]
+
+  @@index([shopId])
+}
+
+// Franjas de trabajo semanales. Varias por día permiten pausas (p. ej. almuerzo).
+model WorkingHours {
+  id       String @id @default(cuid())
+  barberId String
+  // 0 = domingo ... 6 = sábado
+  weekday  Int
+  // Minutos desde medianoche en la zona horaria de la barbería
+  startMin Int
+  endMin   Int
+  barber   Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId, weekday])
+}
+
+model TimeOff {
+  id       String   @id @default(cuid())
+  barberId String
+  startsAt DateTime
+  endsAt   DateTime
+  reason   String?
+  barber   Barber   @relation(fields: [barberId], references: [id], onDelete: Cascade)
+
+  @@index([barberId, startsAt])
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  shopId       String
+  name         String
+  durationMin  Int
+  priceCents   Int
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([shopId])
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  shopId       String
+  name         String
+  // Normalizado a E.164 (+573001234567)
+  phone        String
+  email        String?
+  createdAt    DateTime      @default(now())
+  shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@unique([shopId, phone])
+}
+
+enum AppointmentStatus {
+  BOOKED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// La migración añade una restricción de exclusión que impide que un barbero
+// tenga dos citas BOOKED solapadas, incluso con reservas simultáneas.
+model Appointment {
+  id             String            @id @default(cuid())
+  shopId         String
+  barberId       String
+  serviceId      String
+  customerId     String
+  startsAt       DateTime
+  endsAt         DateTime
+  status         AppointmentStatus @default(BOOKED)
+  // Copia del precio al reservar, para que cambiar la tarifa no altere el histórico
+  priceCents     Int
+  notes          String?
+  // Permite al cliente cancelar desde el enlace del recordatorio
+  manageToken    String            @unique
+  reminderSentAt DateTime?
+  createdAt      DateTime          @default(now())
+  shop           Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  barber         Barber            @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  service        Service           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  customer       Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, startsAt])
+  @@index([barberId, startsAt])
+  @@index([status, reminderSentAt, startsAt])
+}

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Shop" ADD COLUMN     "countryCode" TEXT NOT NULL DEFAULT '57',
+ADD COLUMN     "currency" TEXT NOT NULL DEFAULT 'COP';

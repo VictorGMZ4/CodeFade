@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/* Verde botella sobre hueso: el color de las barberías de siempre.
+   Una tinta, un fondo; las fotografías ponen el resto del color. */
+:root {
+  --paper: #ecebe7;
+  --surface: #e1dfd9;
+  --raised: #d6d4cc;
+  --ink: #2f3b0c;
+  --muted: #56613a;
+  --line: #cfccc2;
+  --accent: #2f3b0c;
+  --accent-ink: #ecebe7;
+  --accent-soft: #dadcc9;
+  --field: #2f3b0c;
+  --field-ink: #ecebe7;
+  --field-muted: #b9c09c;
+  --ok: #2f6b45;
+  --ok-soft: #d6e6d9;
+  --danger: #9b2c22;
+  --danger-soft: #f1dad6;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #12150b;
+    --surface: #1b1f12;
+    --raised: #252a19;
+    --ink: #e7e8e3;
+    --muted: #a8ae92;
+    --line: #2e3420;
+    --accent: #dfe5c3;
+    --accent-ink: #1b220a;
+    --accent-soft: #2a3117;
+    --field: #2b3510;
+    --field-ink: #e7e8e3;
+    --field-muted: #a9b38a;
+    --ok: #8fcf9f;
+    --ok-soft: #1c3123;
+    --danger: #f0968c;
+    --danger-soft: #3a1d1a;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-field: var(--field);
+  --color-field-ink: var(--field-ink);
+  --color-field-muted: var(--field-muted);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: var(--font-text);
+  --font-display: var(--font-display);
+  --ease-out: var(--ease-out);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.font-display {
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+  font-weight: 500;
+}
+
+/* iOS hace zoom en inputs con texto menor a 16px */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+button,
+a,
+[role="button"],
+label:has(input[type="radio"]) {
+  touch-action: manipulation;
+}
+
+button,
+[role="button"],
+label:has(input[type="radio"]) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Respuesta al pulsar: inmediata y corta */
+.press {
+  transition:
+    transform 140ms var(--ease-out),
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Entrada de cada paso del formulario de reserva */
+.step-enter {
+  transition:
+    opacity 220ms var(--ease-out),
+    transform 220ms var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Entradas al hacer scroll: el contenido es visible sin JavaScript; el script
+   solo marca [data-reveal="pending"] lo que aún no ha entrado en pantalla. */
+[data-reveal] > * {
+  transition:
+    opacity 700ms var(--ease-out),
+    transform 700ms var(--ease-out);
+}
+[data-reveal="pending"] > * {
+  opacity: 0;
+  transform: translateY(24px);
+}
+[data-reveal] > *:nth-child(2) { transition-delay: 80ms; }
+[data-reveal] > *:nth-child(3) { transition-delay: 160ms; }
+[data-reveal] > *:nth-child(4) { transition-delay: 240ms; }
+[data-reveal] > *:nth-child(5) { transition-delay: 320ms; }
+
+/* Fundido lento entre las fotos del escenario fijo */
+.stage-photo {
+  transition: opacity 1600ms ease;
+}
+.stage-photo[data-active="false"] {
+  opacity: 0;
+}
+.drift {
+  animation: drift 24s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform: scale(1.02) translateY(0); }
+  to { transform: scale(1.08) translateY(-1.5%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press:active { transform: none; }
+  .step-enter {
+    transition: opacity 150ms ease;
+    @starting-style { transform: none; }
+  }
+  [data-reveal="pending"] > * { transform: none; }
+  .drift { animation: none; }
+  .stage-photo { transition-duration: 200ms; }
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
