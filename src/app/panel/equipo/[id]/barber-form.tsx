@@ -38,7 +38,7 @@ export function BarberForm({ barber }: Props) {
           <input name="name" defaultValue={barber.name} required className={inputClass} />
         </Field>
         <label className="flex items-center gap-2 h-11 text-sm">
-          <input type="checkbox" name="active" defaultChecked={barber.active} className="size-5 accent-accent" />
+          <input type="checkbox" name="active" defaultChecked={barber.active} className="size-5 accent-[var(--accent-ink)]" />
           Acepta reservas
         </label>
       </div>
@@ -55,7 +55,7 @@ export function BarberForm({ barber }: Props) {
                   name={`on-${d}`}
                   checked={day.on}
                   onChange={(e) => update(d, (x) => ({ ...x, on: e.target.checked }))}
-                  className="size-5 accent-accent"
+                  className="size-5 accent-[var(--accent-ink)]"
                 />
                 {WEEKDAYS[d].slice(0, 3)}
               </label>
@@ -104,7 +104,7 @@ export function BarberForm({ barber }: Props) {
                       onClick={() =>
                         update(d, (x) => ({ ...x, ranges: [...x.ranges, { start: x.ranges.at(-1)?.end ?? "14:00", end: "19:00" }] }))
                       }
-                      className="press justify-self-start text-sm text-accent"
+                      className="press justify-self-start text-sm text-accent-ink"
                     >
                       + Añadir franja (p. ej. tras el almuerzo)
                     </button>

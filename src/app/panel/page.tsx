@@ -22,9 +22,9 @@ import { CopyLink } from "./copy-link";
 export const metadata: Metadata = { title: "Agenda" };
 
 const STATUS_LABEL = {
-  BOOKED: { text: "Reservada", className: "bg-accent-soft text-accent" },
+  BOOKED: { text: "Reservada", className: "bg-accent-soft text-accent-ink" },
   COMPLETED: { text: "Atendida", className: "bg-ok-soft text-ok" },
-  CANCELLED: { text: "Cancelada", className: "bg-line text-muted" },
+  CANCELLED: { text: "Cancelada", className: "bg-raised text-muted" },
   NO_SHOW: { text: "No vino", className: "bg-danger-soft text-danger" },
 } as const;
 
@@ -79,7 +79,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
           </h1>
         </div>
         {day !== today && (
-          <Link href={href(today)} className="press text-sm text-accent shrink-0">
+          <Link href={href(today)} className="press text-sm text-accent-ink shrink-0">
             Ir a hoy
           </Link>
         )}
@@ -97,15 +97,15 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
                   href={href(d)}
                   aria-current={selected ? "date" : undefined}
                   className={cx(
-                    "press flex flex-col items-center w-12 py-2 border text-sm",
-                    selected ? "bg-ink text-paper border-ink" : "bg-surface border-line",
+                    "press flex flex-col items-center w-12 py-2 rounded-xl border text-sm",
+                    selected ? "bg-accent text-accent-ink border-accent-line font-semibold" : "bg-surface border-line hover:border-accent-line",
                     d < today && !selected && "opacity-50",
                   )}
                 >
-                  <span className="text-[11px] uppercase tracking-wide opacity-70">
+                  <span className="text-[12px] opacity-70 capitalize">
                     {date.toLocaleDateString("es", { weekday: "short", timeZone: tz }).slice(0, 3)}
                   </span>
-                  <span className="font-medium tabular-nums">{date.getDate()}</span>
+                  <span className="font-bold tabular-nums">{date.getDate()}</span>
                 </Link>
               </li>
             );
@@ -122,7 +122,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
                 href={href(day, b.id)}
                 className={cx(
                   "press rounded-full px-3.5 py-1.5 text-sm border",
-                  barberFilter === b.id ? "bg-accent text-accent-ink border-accent" : "bg-surface border-line",
+                  barberFilter === b.id ? "bg-accent text-accent-ink border-accent-line font-semibold" : "bg-surface border-line hover:border-accent-line",
                 )}
               >
                 {b.name}
@@ -144,7 +144,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
           {serviceCount === 0 ? (
             <p className="text-muted mt-1">
               Primero{" "}
-              <Link href="/panel/servicios" className="text-accent underline underline-offset-4">
+              <Link href="/panel/servicios" className="font-semibold text-accent-ink underline underline-offset-4">
                 añade tus servicios
               </Link>{" "}
               para que los clientes puedan reservar.
@@ -166,18 +166,18 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
               <li key={a.id}>
                 <Card className={cx("p-4 flex gap-4", a.status === "CANCELLED" && "opacity-60")}>
                   <div className="w-14 shrink-0">
-                    <p className="font-medium tabular-nums">{time}</p>
+                    <p className="font-bold tabular-nums">{time}</p>
                     <p className="text-sm text-muted tabular-nums">{formatTime(a.endsAt, tz)}</p>
                   </div>
                   <div className="flex-1 min-w-0 grid gap-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium truncate">{a.customer.name}</p>
-                      <span className={cx("text-xs rounded-full px-2 py-0.5 shrink-0", status.className)}>{status.text}</span>
+                      <p className="font-semibold truncate">{a.customer.name}</p>
+                      <span className={cx("text-xs font-semibold rounded-full px-2.5 py-0.5 shrink-0", status.className)}>{status.text}</span>
                     </div>
                     <p className="text-sm text-muted truncate">
                       {a.service.name} · {a.barber.name} · {formatPrice(a.priceCents, shop.currency)}
                     </p>
-                    {a.notes && <p className="text-sm bg-paper px-2.5 py-1.5">“{a.notes}”</p>}
+                    {a.notes && <p className="text-sm bg-paper rounded-lg px-2.5 py-1.5">“{a.notes}”</p>}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1 text-sm">
                       <a
                         href={whatsappLink(a.customer.phone, message)}

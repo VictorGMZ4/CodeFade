@@ -1,45 +1,57 @@
 @import "tailwindcss";
 
-/* Verde botella sobre hueso: el color de las barberías de siempre.
-   Una tinta, un fondo; las fotografías ponen el resto del color. */
+/* Azul cielo suave: texto azul marino sobre un fondo casi blanco, tarjetas
+   blancas y botones de color claro con texto oscuro (se leen bien al sol). */
 :root {
-  --paper: #ecebe7;
-  --surface: #e1dfd9;
-  --raised: #d6d4cc;
-  --ink: #2f3b0c;
-  --muted: #56613a;
-  --line: #cfccc2;
-  --accent: #2f3b0c;
-  --accent-ink: #ecebe7;
-  --accent-soft: #dadcc9;
-  --field: #2f3b0c;
-  --field-ink: #ecebe7;
-  --field-muted: #b9c09c;
-  --ok: #2f6b45;
-  --ok-soft: #d6e6d9;
-  --danger: #9b2c22;
-  --danger-soft: #f1dad6;
+  --paper: #f6f9fc; /* fondo de la página */
+  --surface: #ffffff; /* tarjetas */
+  --raised: #eef3f9; /* rellenos suaves, hover */
+  --ink: #1e3a5f; /* texto principal */
+  --muted: #5b7491; /* texto secundario */
+  --line: #d6e2ef; /* bordes finos */
+  --accent: #cfe3ff; /* fondo de la acción principal y lo seleccionado */
+  --accent-ink: #0b3a75; /* texto sobre --accent */
+  --accent-soft: #e8f1ff;
+  --accent-line: #7fb0f5; /* borde de lo seleccionado */
+  --field: #1e3a5f; /* secciones invertidas */
+  --field-ink: #f6f9fc;
+  --field-muted: #b5c7dc;
+  --blob-1: #cfe3ff;
+  --blob-2: #f3dcf8;
+  --ok: #1f6b45;
+  --ok-soft: #dcf2e5;
+  --danger: #a3262a;
+  --danger-soft: #fbe3e3;
+  --shadow-card:
+    0 4px 5px rgba(71, 103, 136, 0.04), 0 8px 15px rgba(71, 103, 136, 0.03), 0 30px 50px rgba(71, 103, 136, 0.08);
+  --shadow-soft:
+    0 4px 5px rgba(71, 103, 136, 0.04), 0 4px 10px rgba(71, 103, 136, 0.03), 0 10px 20px rgba(71, 103, 136, 0.05);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #12150b;
-    --surface: #1b1f12;
-    --raised: #252a19;
-    --ink: #e7e8e3;
-    --muted: #a8ae92;
-    --line: #2e3420;
-    --accent: #dfe5c3;
-    --accent-ink: #1b220a;
-    --accent-soft: #2a3117;
-    --field: #2b3510;
-    --field-ink: #e7e8e3;
-    --field-muted: #a9b38a;
-    --ok: #8fcf9f;
-    --ok-soft: #1c3123;
-    --danger: #f0968c;
-    --danger-soft: #3a1d1a;
+    --paper: #0f1a2a;
+    --surface: #16243a;
+    --raised: #1e2f48;
+    --ink: #e3ecf7;
+    --muted: #9fb3cb;
+    --line: #2a3d58;
+    --accent: #2a5288;
+    --accent-ink: #e3efff;
+    --accent-soft: #1b2f4b;
+    --accent-line: #6c9fdf;
+    --field: #0a1320;
+    --field-ink: #e3ecf7;
+    --field-muted: #9fb3cb;
+    --blob-1: #1e3d66;
+    --blob-2: #3a2a52;
+    --ok: #86d3a5;
+    --ok-soft: #173326;
+    --danger: #f19a9a;
+    --danger-soft: #3a1c1f;
+    --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -53,6 +65,7 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
   --color-field: var(--field);
   --color-field-ink: var(--field-ink);
   --color-field-muted: var(--field-muted);
@@ -60,8 +73,9 @@
   --color-ok-soft: var(--ok-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-soft: var(--shadow-soft);
   --font-sans: var(--font-text);
-  --font-display: var(--font-display);
   --ease-out: var(--ease-out);
 }
 
@@ -76,14 +90,14 @@ body {
   color: var(--ink);
   font-family: var(--font-text), system-ui, sans-serif;
   font-size: 17px;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
+/* Titulares: Manrope en negrita, como en el sistema de referencia */
 .font-display {
-  font-optical-sizing: auto;
+  font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 0.98;
-  font-weight: 500;
+  line-height: 1.15;
 }
 
 /* iOS hace zoom en inputs con texto menor a 16px */
@@ -113,11 +127,21 @@ label:has(input[type="radio"]) {
     transform 140ms var(--ease-out),
     background-color 140ms ease,
     border-color 140ms ease,
+    box-shadow 140ms ease,
     color 140ms ease,
     opacity 140ms ease;
 }
 .press:active {
   transform: scale(0.97);
+}
+
+/* Manchas de color suaves detrás del widget de la portada (solo decoración) */
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 /* Entrada de cada paso del formulario de reserva */
@@ -135,32 +159,16 @@ label:has(input[type="radio"]) {
    solo marca [data-reveal="pending"] lo que aún no ha entrado en pantalla. */
 [data-reveal] > * {
   transition:
-    opacity 700ms var(--ease-out),
-    transform 700ms var(--ease-out);
+    opacity 600ms var(--ease-out),
+    transform 600ms var(--ease-out);
 }
 [data-reveal="pending"] > * {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(20px);
 }
-[data-reveal] > *:nth-child(2) { transition-delay: 80ms; }
-[data-reveal] > *:nth-child(3) { transition-delay: 160ms; }
-[data-reveal] > *:nth-child(4) { transition-delay: 240ms; }
-[data-reveal] > *:nth-child(5) { transition-delay: 320ms; }
-
-/* Fundido lento entre las fotos del escenario fijo */
-.stage-photo {
-  transition: opacity 1600ms ease;
-}
-.stage-photo[data-active="false"] {
-  opacity: 0;
-}
-.drift {
-  animation: drift 24s ease-in-out infinite alternate;
-}
-@keyframes drift {
-  from { transform: scale(1.02) translateY(0); }
-  to { transform: scale(1.08) translateY(-1.5%); }
-}
+[data-reveal] > *:nth-child(2) { transition-delay: 70ms; }
+[data-reveal] > *:nth-child(3) { transition-delay: 140ms; }
+[data-reveal] > *:nth-child(4) { transition-delay: 210ms; }
 
 @media (prefers-reduced-motion: reduce) {
   .press:active { transform: none; }
@@ -169,8 +177,6 @@ label:has(input[type="radio"]) {
     @starting-style { transform: none; }
   }
   [data-reveal="pending"] > * { transform: none; }
-  .drift { animation: none; }
-  .stage-photo { transition-duration: 200ms; }
 }
 
 .scrollbar-none {

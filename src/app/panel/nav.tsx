@@ -41,8 +41,8 @@ function NavLinks({ variant, pathname }: Variant & { pathname: string | null }) 
               href={href}
               aria-current={isActive(href) ? "page" : undefined}
               className={cx(
-                "press block px-3 py-1.5 text-sm",
-                isActive(href) ? "bg-ink text-paper" : "text-muted hover:text-ink",
+                "press block rounded-lg px-3 py-1.5 text-sm",
+                isActive(href) ? "bg-accent text-accent-ink font-semibold" : "text-muted hover:text-ink",
               )}
             >
               {label}
@@ -62,7 +62,7 @@ function NavLinks({ variant, pathname }: Variant & { pathname: string | null }) 
             aria-current={isActive(href) ? "page" : undefined}
             className={cx(
               "press flex flex-col items-center gap-1 pt-2.5 pb-2 text-[11px] font-medium",
-              isActive(href) ? "text-accent" : "text-muted",
+              isActive(href) ? "text-accent-ink font-bold" : "text-muted",
             )}
           >
             <Icon />

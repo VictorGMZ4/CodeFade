@@ -31,7 +31,7 @@ export function TimeOffForm({ barberId, today }: { barberId: string; today: stri
           name="allDay"
           checked={allDay}
           onChange={(e) => setAllDay(e.target.checked)}
-          className="size-5 accent-accent"
+          className="size-5 accent-[var(--accent-ink)]"
         />
         Todo el día
       </label>

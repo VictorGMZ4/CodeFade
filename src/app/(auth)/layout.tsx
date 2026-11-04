@@ -1,30 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Stripe } from "@/components/stripe";
 
-// Formulario a la izquierda; en escritorio, la mesa de trabajo de una barbería a la derecha.
+// Formulario en tarjeta a la izquierda; en escritorio, una barbería a la derecha.
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
-    <div className="flex-1 p-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-3">
-      <main className="bg-surface min-h-[calc(100svh-24px)] flex flex-col">
-        <Stripe />
-        <div className="px-6 sm:px-10 pt-6">
-          <Link href="/" className="press font-display text-[28px]">
-            Turno
-          </Link>
-        </div>
-        <div className="flex-1 flex flex-col justify-center px-6 sm:px-10 py-12">
-          <div className="w-full max-w-[420px]">{children}</div>
-        </div>
-      </main>
-      <div className="hidden lg:block relative h-[calc(100svh-24px)] sticky top-3 overflow-hidden">
+    <div className="flex-1 w-full max-w-[1200px] mx-auto px-4 sm:px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-10 lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+      <div>
+        <Link href="/" className="press inline-block font-display text-[22px] mb-8 lg:mb-10">
+          Turno
+        </Link>
+        <main className="bg-surface rounded-2xl border border-line shadow-card p-6 sm:p-9 max-w-[480px]">{children}</main>
+      </div>
+      <div className="hidden lg:block relative h-[min(780px,calc(100svh-80px))] rounded-3xl overflow-hidden">
         <Image
           src="/fotos/mesa.jpg"
           alt="Mesa de trabajo de una barbería: peines, cepillos, tijeras y talco"
           fill
           priority
           sizes="50vw"
-          className="drift object-cover"
+          className="object-cover"
         />
       </div>
     </div>

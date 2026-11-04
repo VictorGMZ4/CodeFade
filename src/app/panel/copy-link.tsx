@@ -20,7 +20,7 @@ export function CopyLink({ url }: { url: string }) {
 
   return (
     <div className="flex flex-col sm:flex-row items-stretch gap-2 max-w-md mx-auto">
-      <code className="flex-1 min-w-0 truncate bg-paper border border-line px-3 py-2.5 text-sm text-left select-all">
+      <code className="flex-1 min-w-0 truncate rounded-lg bg-paper border border-line px-3 py-2.5 text-sm text-left select-all">
         {full}
       </code>
       <Button type="button" variant="secondary" onClick={copy}>

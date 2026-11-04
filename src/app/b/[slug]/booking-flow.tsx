@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { cx, Field, inputClass, Notice } from "@/components/ui";
+import { buttonClass, cx, Field, inputClass, Notice } from "@/components/ui";
 import { book, fetchOpenDays, fetchSlots, type BookingState } from "./actions";
 
 type Service = { id: string; name: string; duration: string; price: string };
 type Barber = { id: string; name: string };
 
 const ANY = "";
+const WEEK_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
 
 export function BookingFlow({
   slug,
@@ -30,9 +31,9 @@ export function BookingFlow({
   const [barberId, setBarberId] = useState<string | null>(barbers.length === 1 ? barbers[0].id : null);
   const [days, setDays] = useState<string[] | null>(null);
   const [day, setDay] = useState<string | null>(null);
+  const [month, setMonth] = useState<string | null>(null); // "yyyy-MM" visible en el calendario
   const [slots, setSlots] = useState<string[] | null>(null);
   const [start, setStart] = useState<string | null>(null);
-  const [showAllDays, setShowAllDays] = useState(false);
   const [loadingDays, startDays] = useTransition();
   const [loadingSlots, startSlots] = useTransition();
 
@@ -62,7 +63,10 @@ export function BookingFlow({
     try {
       const open = await fetchOpenDays(slug, sId, bId || null);
       setDays(open);
-      if (open[0]) loadSlots(sId, bId, open[0]);
+      if (open[0]) {
+        setMonth(open[0].slice(0, 7));
+        loadSlots(sId, bId, open[0]);
+      }
     } catch {
       setLoadError(true);
     }
@@ -75,7 +79,6 @@ export function BookingFlow({
     setDay(null);
     setSlots(null);
     setStart(null);
-    setShowAllDays(false);
     setLoadError(false);
     if (!sId || bId === null) return;
     startDays(() => fetchDays(sId, bId));
@@ -106,8 +109,6 @@ export function BookingFlow({
       new Date(iso),
     );
   const hourOf = (iso: string) => Number(time(iso).slice(0, 2));
-  const weekday = (d: string) =>
-    new Intl.DateTimeFormat("es", { weekday: "short", timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`)).slice(0, 3);
   const dayLong = (d: string) =>
     new Intl.DateTimeFormat("es", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(
       new Date(`${d}T12:00:00Z`),
@@ -121,8 +122,6 @@ export function BookingFlow({
       ].filter((g) => g.items.length)
     : [];
 
-  const visibleDays = days ? (showAllDays ? days : days.slice(0, 14)) : [];
-
   const summary =
     service && start
       ? `${service.name} · ${new Intl.DateTimeFormat("es", {
@@ -134,9 +133,9 @@ export function BookingFlow({
       : null;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-12 pb-[calc(8rem+env(safe-area-inset-bottom))]">
-      <Section title="Servicio">
-        <div className="grid gap-1.5">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 pb-[calc(8rem+env(safe-area-inset-bottom))]">
+      <Step title="Elige un servicio">
+        <div className="grid gap-2">
           {services.map((s) => (
             <Choice
               key={s.id}
@@ -149,21 +148,22 @@ export function BookingFlow({
               }}
             >
               <span className="flex-1 min-w-0">
-                <span className="block font-medium">{s.name}</span>
-                <span className="block text-[15px] opacity-75">{s.duration}</span>
+                <span className="block font-semibold">{s.name}</span>
+                <span className="block text-[14px] text-muted">{s.duration}</span>
               </span>
-              <span className="font-medium tabular-nums">{s.price}</span>
+              <span className="font-semibold tabular-nums">{s.price}</span>
             </Choice>
           ))}
         </div>
-      </Section>
+      </Step>
 
       {barbers.length > 1 && serviceId && (
-        <Section title="Barbero">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        <Step title="¿Con quién?">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {[{ id: ANY, name: "El primero libre" }, ...barbers].map((b) => (
               <Choice
                 key={b.id || "any"}
+                className={b.id ? undefined : "col-span-full"}
                 name="barber"
                 checked={barberId === b.id}
                 onChange={() => {
@@ -172,66 +172,52 @@ export function BookingFlow({
                   scrollTo(timeRef);
                 }}
               >
-                <span className="truncate font-medium">{b.name}</span>
+                <span
+                  aria-hidden
+                  className="grid place-items-center size-9 shrink-0 rounded-full bg-raised text-[14px] font-bold"
+                >
+                  {b.id ? b.name.slice(0, 1).toUpperCase() : "★"}
+                </span>
+                <span className="truncate font-semibold">{b.name}</span>
               </Choice>
             ))}
           </div>
-        </Section>
+        </Step>
       )}
 
       {serviceId && barberChosen && (
-        <Section title="Día y hora" ref={timeRef}>
+        <Step title="Elige día y hora" ref={timeRef}>
           {loadError ? (
             <Notice tone="error">No pudimos cargar los horarios. Revisa tu conexión e inténtalo de nuevo.</Notice>
-          ) : loadingDays || days === null ? (
-            <SkeletonGrid count={14} />
-          ) : days.length === 0 ? (
-            <p className="text-muted">No quedan horarios libres en las próximas semanas.</p>
+          ) : loadingDays || days === null || !month ? (
+            days !== null && days.length === 0 ? (
+              <p className="text-muted">No quedan horarios libres en las próximas semanas.</p>
+            ) : (
+              <SkeletonGrid count={35} />
+            )
           ) : (
-            <>
-              <div className="grid grid-cols-7 gap-1">
-                {visibleDays.map((d) => {
-                  const selected = d === day;
-                  return (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => serviceId && barberId !== null && loadSlots(serviceId, barberId, d)}
-                      aria-pressed={selected}
-                      aria-label={dayLong(d)}
-                      className={cx(
-                        "press flex flex-col items-center py-2 min-w-0",
-                        selected ? "bg-ink text-paper" : "bg-surface hover:bg-raised",
-                      )}
-                    >
-                      <span className="text-[13px] opacity-75 capitalize">{weekday(d)}</span>
-                      <span className="text-[19px] font-medium tabular-nums leading-tight">{Number(d.slice(8))}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {days.length > 14 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllDays((v) => !v)}
-                  className="press mt-3 text-[15px] underline underline-offset-4"
-                >
-                  {showAllDays ? "Ver menos días" : `Ver ${days.length - 14} días más`}
-                </button>
-              )}
+            <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-10">
+              <MonthCalendar
+                month={month}
+                openDays={days}
+                selected={day}
+                onMonth={setMonth}
+                onSelect={(d) => serviceId && barberId !== null && loadSlots(serviceId, barberId, d)}
+                label={dayLong}
+              />
 
-              <div className="mt-8 min-h-24">
-                {day && <p className="font-medium mb-4 first-letter:uppercase">{dayLong(day)}</p>}
+              <div className="min-h-24">
+                {day && <p className="font-semibold mb-4 first-letter:uppercase">{dayLong(day)}</p>}
                 {loadingSlots || slots === null ? (
-                  <SkeletonGrid count={8} />
+                  <SkeletonGrid count={8} cols="grid-cols-3" />
                 ) : slots.length === 0 ? (
                   <p className="text-muted">Este día ya no tiene horarios libres.</p>
                 ) : (
                   <div className="grid gap-5">
                     {groups.map((g) => (
                       <div key={g.label}>
-                        <p className="text-[15px] text-muted mb-2">{g.label}</p>
-                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                        <p className="text-[14px] font-semibold text-muted mb-2">{g.label}</p>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 gap-2">
                           {g.items.map((s) => (
                             <button
                               key={s}
@@ -242,8 +228,10 @@ export function BookingFlow({
                                 scrollTo(detailsRef);
                               }}
                               className={cx(
-                                "press h-12 text-[16px] font-medium tabular-nums",
-                                start === s ? "bg-ink text-paper" : "bg-surface hover:bg-raised",
+                                "press h-12 rounded-lg border text-[16px] font-semibold tabular-nums",
+                                start === s
+                                  ? "bg-accent border-accent-line text-accent-ink"
+                                  : "border-accent-line text-accent-ink hover:bg-accent-soft",
                               )}
                             >
                               {time(s)}
@@ -255,14 +243,14 @@ export function BookingFlow({
                   </div>
                 )}
               </div>
-            </>
+            </div>
           )}
-        </Section>
+        </Step>
       )}
 
       {start && (
-        <Section title="Tus datos" ref={detailsRef}>
-          <form id="booking" action={action} className="grid gap-4">
+        <Step title="Tus datos" ref={detailsRef}>
+          <form id="booking" action={action} className="grid gap-4 max-w-[520px]">
             <input type="hidden" name="serviceId" value={serviceId ?? ""} />
             <input type="hidden" name="barberId" value={barberId ?? ""} />
             <input type="hidden" name="start" value={start} />
@@ -306,22 +294,17 @@ export function BookingFlow({
               <textarea name="notes" rows={2} maxLength={200} className={`${inputClass} h-auto py-2.5 resize-none`} />
             </Field>
           </form>
-        </Section>
+        </Step>
       )}
 
       {/* Barra inferior fija con el resumen y el botón de confirmar */}
       {start && (
-        <div className="fixed inset-x-0 bottom-0 z-10 bg-ink text-paper pb-[env(safe-area-inset-bottom)] step-enter">
-          <div className="max-w-5xl mx-auto px-4 py-3 grid gap-2">
+        <div className="fixed inset-x-0 bottom-0 z-10 bg-surface border-t border-line shadow-card pb-[env(safe-area-inset-bottom)] step-enter">
+          <div className="max-w-[1100px] mx-auto px-4 py-3 grid gap-2">
             {state?.error && <Notice tone="error">{state.error}</Notice>}
             <div className="flex items-center gap-4">
-              <p className="flex-1 min-w-0 text-[15px] leading-snug first-letter:uppercase">{summary}</p>
-              <button
-                type="submit"
-                form="booking"
-                disabled={pending}
-                className="press h-12 px-6 bg-paper text-ink font-medium disabled:opacity-60"
-              >
+              <p className="flex-1 min-w-0 text-[15px] font-semibold leading-snug first-letter:uppercase">{summary}</p>
+              <button type="submit" form="booking" disabled={pending} className={buttonClass("primary", "px-6")}>
                 {pending ? "Reservando…" : "Confirmar"}
               </button>
             </div>
@@ -332,10 +315,99 @@ export function BookingFlow({
   );
 }
 
-function Section({ title, children, ref }: { title: string; children: React.ReactNode; ref?: React.Ref<HTMLElement> }) {
+/** Calendario mensual: los días con hueco se pueden elegir, el resto se ven apagados. */
+function MonthCalendar({
+  month,
+  openDays,
+  selected,
+  onMonth,
+  onSelect,
+  label,
+}: {
+  month: string;
+  openDays: string[];
+  selected: string | null;
+  onMonth: (m: string) => void;
+  onSelect: (d: string) => void;
+  label: (d: string) => string;
+}) {
+  const open = new Set(openDays);
+  const months = [...new Set(openDays.map((d) => d.slice(0, 7)))].sort();
+  const index = months.indexOf(month);
+  const [y, m] = month.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const offset = (first.getUTCDay() + 6) % 7; // lunes primero
+  const title = new Intl.DateTimeFormat("es", { month: "long", year: "numeric", timeZone: "UTC" }).format(first);
+  const pad = (n: number) => String(n).padStart(2, "0");
+
   return (
-    <section ref={ref} className="step-enter scroll-mt-6 min-w-0">
-      <h2 className="font-display text-[28px] mb-4">{title}</h2>
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-semibold first-letter:uppercase">{title}</p>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => onMonth(months[index - 1])}
+            disabled={index <= 0}
+            aria-label="Mes anterior"
+            className="press size-10 rounded-full grid place-items-center text-accent-ink hover:bg-accent-soft disabled:opacity-30 disabled:pointer-events-none"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() => onMonth(months[index + 1])}
+            disabled={index >= months.length - 1}
+            aria-label="Mes siguiente"
+            className="press size-10 rounded-full grid place-items-center text-accent-ink hover:bg-accent-soft disabled:opacity-30 disabled:pointer-events-none"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {WEEK_LABELS.map((d) => (
+          <span key={d} className="text-[13px] font-semibold text-muted py-1">
+            {d}
+          </span>
+        ))}
+        {Array.from({ length: offset }, (_, i) => (
+          <span key={`e${i}`} />
+        ))}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const d = `${month}-${pad(i + 1)}`;
+          const available = open.has(d);
+          const isSelected = d === selected;
+          return available ? (
+            <button
+              key={d}
+              type="button"
+              onClick={() => onSelect(d)}
+              aria-pressed={isSelected}
+              aria-label={label(d)}
+              className={cx(
+                "press aspect-square max-h-12 w-full mx-auto rounded-full grid place-items-center text-[16px] font-bold tabular-nums",
+                isSelected ? "bg-accent text-accent-ink ring-2 ring-accent-line" : "bg-accent-soft text-accent-ink hover:bg-accent",
+              )}
+            >
+              {i + 1}
+            </button>
+          ) : (
+            <span key={d} className="aspect-square max-h-12 grid place-items-center text-[15px] text-muted/60 tabular-nums">
+              {i + 1}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Step({ title, children, ref }: { title: string; children: React.ReactNode; ref?: React.Ref<HTMLElement> }) {
+  return (
+    <section ref={ref} className="step-enter scroll-mt-4 min-w-0 bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7">
+      <h2 className="font-display text-[20px] mb-4">{title}</h2>
       {children}
     </section>
   );
@@ -345,19 +417,22 @@ function Choice({
   name,
   checked,
   onChange,
+  className,
   children,
 }: {
   name: string;
   checked: boolean;
   onChange: () => void;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
     <label
       className={cx(
-        "press flex items-center gap-3 px-4 py-3.5 cursor-pointer min-w-0",
-        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
-        checked ? "bg-ink text-paper" : "bg-surface hover:bg-raised",
+        className,
+        "press flex items-center gap-3 rounded-xl border px-4 py-3.5 cursor-pointer min-w-0",
+        "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-line",
+        checked ? "bg-accent border-accent-line text-accent-ink" : "border-line hover:border-accent-line",
       )}
     >
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
@@ -366,11 +441,11 @@ function Choice({
   );
 }
 
-function SkeletonGrid({ count }: { count: number }) {
+function SkeletonGrid({ count, cols = "grid-cols-7" }: { count: number; cols?: string }) {
   return (
-    <div className="grid grid-cols-7 gap-1" aria-label="Cargando">
+    <div className={cx("grid gap-2", cols)} role="status" aria-label="Cargando">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="h-14 bg-surface animate-pulse" />
+        <div key={i} className="h-11 rounded-lg bg-raised animate-pulse" />
       ))}
     </div>
   );
