@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Card, PageTitle } from "@/components/ui";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -19,7 +20,8 @@ export default function TeamPage() {
 }
 
 async function TeamPageContent() {
-  const { shop } = await requireShop();
+  const { shop, isOwner, barberId } = await requireShop();
+  if (!isOwner) redirect(barberId ? `/panel/equipo/${barberId}` : "/panel");
   const barbers = await db.barber.findMany({
     where: { shopId: shop.id },
     orderBy: [{ active: "desc" }, { createdAt: "asc" }],

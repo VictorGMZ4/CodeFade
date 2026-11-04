@@ -13,8 +13,10 @@ model User {
   email        String       @unique
   name         String
   passwordHash String
+  mustChangePassword Boolean @default(false)
   createdAt    DateTime     @default(now())
   memberships  Membership[]
+  barbers      Barber[]
 }
 
 enum Role {
@@ -62,6 +64,9 @@ model Shop {
 model Barber {
   id           String         @id @default(cuid())
   shopId       String
+  userId       String?        @unique
+  phone        String?
+  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   name         String
   active       Boolean        @default(true)
   createdAt    DateTime       @default(now())

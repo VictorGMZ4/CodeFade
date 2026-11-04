@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { logout } from "@/app/actions/auth";
 import { Bar } from "@/components/skeleton";
 import { requireShop } from "@/lib/auth";
 import { PanelNav } from "./nav";
 
-// El marco del panel es estático; solo el nombre de la barbería depende de la sesión.
+// El marco es estático; el nombre y la navegación se resuelven con la sesión.
 export default function PanelLayout({ children }: LayoutProps<"/panel">) {
   return (
     <div className="flex-1 flex flex-col">
@@ -17,7 +18,7 @@ export default function PanelLayout({ children }: LayoutProps<"/panel">) {
             </Suspense>
           </Link>
           <div className="hidden md:block flex-1">
-            <PanelNav variant="top" />
+            <Suspense fallback={<Link href="/panel">Agenda</Link>}><SessionNav variant="top" /></Suspense>
           </div>
           <form action={logout} className="ml-auto md:ml-0">
             <button className="press text-sm text-muted hover:text-ink">Salir</button>
@@ -30,13 +31,19 @@ export default function PanelLayout({ children }: LayoutProps<"/panel">) {
       </main>
 
       <nav className="md:hidden fixed inset-x-0 bottom-0 z-20 bg-surface/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]">
-        <PanelNav variant="bottom" />
+        <Suspense fallback={<Link href="/panel" className="block p-3 text-center">Agenda</Link>}><SessionNav variant="bottom" /></Suspense>
       </nav>
     </div>
   );
 }
 
 async function ShopName() {
-  const { shop } = await requireShop();
+  const { shop, user } = await requireShop();
+  if (user.mustChangePassword) redirect("/cambiar-contrasena");
   return shop.name;
+}
+
+async function SessionNav({ variant }: { variant: "top" | "bottom" }) {
+  const { role, barberId } = await requireShop();
+  return <PanelNav variant={variant} role={role} barberId={barberId} />;
 }

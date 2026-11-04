@@ -12,30 +12,31 @@ const LINKS = [
   { href: "/panel/ajustes", label: "Ajustes", icon: GearIcon },
 ] as const;
 
-type Variant = { variant: "top" | "bottom" };
+type Variant = { variant: "top" | "bottom"; role: "OWNER" | "STAFF"; barberId: string | null };
 
 // La ruta actual solo se conoce en tiempo de petición: mientras llega se
 // muestran los enlaces sin marcar ninguno como activo.
-export function PanelNav({ variant }: Variant) {
+export function PanelNav(props: Variant) {
   return (
-    <Suspense fallback={<NavLinks variant={variant} pathname={null} />}>
-      <CurrentNav variant={variant} />
+    <Suspense fallback={<NavLinks {...props} pathname={null} />}>
+      <CurrentNav {...props} />
     </Suspense>
   );
 }
 
-function CurrentNav({ variant }: Variant) {
-  return <NavLinks variant={variant} pathname={usePathname()} />;
+function CurrentNav(props: Variant) {
+  return <NavLinks {...props} pathname={usePathname()} />;
 }
 
-function NavLinks({ variant, pathname }: Variant & { pathname: string | null }) {
+function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: string | null }) {
+  const links = role === "OWNER" ? LINKS : [LINKS[0], ...(barberId ? [{ href: `/panel/equipo/${barberId}`, label: "Mi horario", icon: CalendarIcon }] : [])];
   const isActive = (href: string) =>
     pathname !== null && (href === "/panel" ? pathname === href : pathname.startsWith(href));
 
   if (variant === "top") {
     return (
       <ul className="flex gap-1">
-        {LINKS.map(({ href, label }) => (
+        {links.map(({ href, label }) => (
           <li key={href}>
             <Link
               href={href}
@@ -54,8 +55,8 @@ function NavLinks({ variant, pathname }: Variant & { pathname: string | null }) 
   }
 
   return (
-    <ul className="grid grid-cols-4">
-      {LINKS.map(({ href, label, icon: Icon }) => (
+    <ul className={cx("grid", role === "OWNER" ? "grid-cols-4" : barberId ? "grid-cols-2" : "grid-cols-1")}>
+      {links.map(({ href, label, icon: Icon }) => (
         <li key={href}>
           <Link
             href={href}

@@ -7,12 +7,13 @@ import { WEEKDAYS, minutesToHHMM } from "@/lib/time";
 
 type Range = { start: string; end: string };
 type Props = {
-  barber: { id: string; name: string; active: boolean; hours: { weekday: number; startMin: number; endMin: number }[] };
+  isOwner: boolean;
+  barber: { phone: string | null; id: string; name: string; active: boolean; hours: { weekday: number; startMin: number; endMin: number }[] };
 };
 
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
 
-export function BarberForm({ barber }: Props) {
+export function BarberForm({ barber, isOwner }: Props) {
   const [state, action, pending] = useActionState(updateBarber, undefined);
   const [week, setWeek] = useState(() =>
     Object.fromEntries(
@@ -33,7 +34,7 @@ export function BarberForm({ barber }: Props) {
       <input type="hidden" name="id" value={barber.id} />
       {state?.error && <Notice tone="error">{state.error}</Notice>}
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+      {isOwner && <><div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <Field label="Nombre" error={state?.errors?.name}>
           <input name="name" defaultValue={barber.name} required className={inputClass} />
         </Field>
@@ -42,6 +43,9 @@ export function BarberForm({ barber }: Props) {
           Acepta reservas
         </label>
       </div>
+      <Field label="WhatsApp (opcional)" error={state?.errors?.phone}>
+        <input name="phone" type="tel" autoComplete="tel" defaultValue={barber.phone ?? ""} className={inputClass} aria-invalid={!!state?.errors?.phone} />
+      </Field></>}
 
       <fieldset className="grid gap-1">
         <legend className="text-sm font-medium mb-2">Horario semanal</legend>

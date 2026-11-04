@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createBarber } from "@/app/actions/panel";
-import { Button, Field, inputClass } from "@/components/ui";
+import { Button, Field, Notice, inputClass } from "@/components/ui";
 
 export function NewBarberForm() {
   const [state, action, pending] = useActionState(createBarber, undefined);
@@ -14,8 +14,12 @@ export function NewBarberForm() {
 
   return (
     <form ref={formRef} action={action} className="grid gap-3">
+      {state?.error && <Notice tone="error">{state.error}</Notice>}
       <Field label="Nombre" error={state?.errors?.name}>
         <input name="name" required className={inputClass} aria-invalid={!!state?.errors?.name} />
+      </Field>
+      <Field label="WhatsApp (opcional)" error={state?.errors?.phone}>
+        <input name="phone" type="tel" autoComplete="tel" className={inputClass} aria-invalid={!!state?.errors?.phone} />
       </Field>
       <Button type="submit" disabled={pending}>
         {pending ? "Añadiendo…" : "Añadir"}

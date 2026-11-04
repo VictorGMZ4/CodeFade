@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { setServiceActive } from "@/app/actions/panel";
 import { Card, Notice, PageTitle } from "@/components/ui";
-import { requireShop } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
 import { formatDuration } from "@/lib/time";
@@ -20,7 +20,7 @@ export default function ServicesPage(props: PageProps<"/panel/servicios">) {
 }
 
 async function ServicesPageContent({ searchParams }: PageProps<"/panel/servicios">) {
-  const { shop } = await requireShop();
+  const { shop } = await requireOwner();
   const { bienvenida } = await searchParams;
   const services = await db.service.findMany({
     where: { shopId: shop.id },
@@ -59,7 +59,7 @@ async function ServicesPageContent({ searchParams }: PageProps<"/panel/servicios
               </summary>
               <div className="px-4 pb-4 grid gap-3">
                 <ServiceForm service={s} currency={shop.currency} />
-                <form action={setServiceActive.bind(null, s.id, !s.active)}>
+                <form action={async () => { "use server"; await setServiceActive(s.id, !s.active); }}>
                   <button className="press text-sm text-muted underline underline-offset-4">
                     {s.active ? "Ocultar de las reservas" : "Volver a mostrar en las reservas"}
                   </button>

@@ -1,5 +1,5 @@
 // Datos de ejemplo: barbería "demo" con dos barberos, servicios y algunas citas.
-// Cuenta: demo@codefade.test / demo1234
+// Cuentas: demo@codefade.test y camilo@codefade.test / demo1234
 import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
@@ -17,10 +17,14 @@ const HOURS = [1, 2, 3, 4, 5, 6].flatMap((weekday) => [
 
 async function main() {
   await db.shop.deleteMany({ where: { slug: "demo" } });
-  await db.user.deleteMany({ where: { email: "demo@codefade.test" } });
+  await db.user.deleteMany({ where: { email: { in: ["demo@codefade.test", "camilo@codefade.test"] } } });
 
   const user = await db.user.create({
     data: { email: "demo@codefade.test", name: "Andrés", passwordHash: await bcrypt.hash("demo1234", 12) },
+  });
+
+  const staff = await db.user.create({
+    data: { email: "camilo@codefade.test", name: "Camilo", passwordHash: await bcrypt.hash("demo1234", 12), mustChangePassword: false },
   });
 
   const shop = await db.shop.create({
@@ -32,7 +36,7 @@ async function main() {
       countryCode: "57",
       phone: "+57 300 123 4567",
       address: "Cra. 7 #45-12, Bogotá",
-      memberships: { create: { userId: user.id, role: "OWNER" } },
+      memberships: { create: [{ userId: user.id, role: "OWNER" }, { userId: staff.id, role: "STAFF" }] },
       services: {
         create: [
           { name: "Corte clásico", durationMin: 30, priceCents: 2500000 },
@@ -46,8 +50,8 @@ async function main() {
   });
 
   const barbers = await Promise.all(
-    ["Andrés", "Camilo"].map((name) =>
-      db.barber.create({ data: { shopId: shop.id, name, workingHours: { create: HOURS } } }),
+    [{ name: "Andrés", userId: user.id, phone: "+573001234567" }, { name: "Camilo", userId: staff.id, phone: "+573007654321" }].map((profile) =>
+      db.barber.create({ data: { shopId: shop.id, ...profile, workingHours: { create: HOURS } } }),
     ),
   );
 
@@ -86,7 +90,7 @@ async function main() {
     }
   }
 
-  console.log("Seed listo → /b/demo · demo@codefade.test / demo1234");
+  console.log("Seed listo → /b/demo · demo@codefade.test y camilo@codefade.test / demo1234");
 }
 
 main().finally(() => db.$disconnect());

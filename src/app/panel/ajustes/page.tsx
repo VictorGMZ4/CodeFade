@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import { Card, PageTitle } from "@/components/ui";
-import { requireShop } from "@/lib/auth";
+import { requireOwner } from "@/lib/auth";
 import { CopyLink } from "../copy-link";
 import { SettingsForm } from "./settings-form";
 
@@ -17,7 +17,7 @@ export default function SettingsPage() {
 }
 
 async function SettingsPageContent() {
-  const { shop } = await requireShop();
+  const { shop } = await requireOwner();
   const base = process.env.APP_URL ?? "";
 
   return (

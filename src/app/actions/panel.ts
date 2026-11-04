@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { parsePrice, slugify } from "@/lib/format";
+import { normalizePhone, parsePrice, slugify } from "@/lib/format";
 import { hhmmToMinutes, localToUtc } from "@/lib/time";
 
 // Todas las acciones obtienen la barbería de la sesión y filtran por shopId:
@@ -21,7 +21,8 @@ const ServiceSchema = z.object({
 });
 
 export async function saveService(_s: FormResult, formData: FormData): Promise<FormResult> {
-  const { shop } = await requireShop();
+  const { shop, isOwner } = await requireShop();
+  if (!isOwner) return { error: "No tienes permiso para esta acción." };
   const parsed = ServiceSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
   const priceCents = parsePrice(parsed.data.price);
@@ -40,7 +41,8 @@ export async function saveService(_s: FormResult, formData: FormData): Promise<F
 }
 
 export async function setServiceActive(id: string, active: boolean) {
-  const { shop } = await requireShop();
+  const { shop, isOwner } = await requireShop();
+  if (!isOwner) return { error: "No tienes permiso para esta acción." };
   await db.service.updateMany({ where: { id, shopId: shop.id }, data: { active } });
   revalidatePath("/panel/servicios");
 }
@@ -48,9 +50,14 @@ export async function setServiceActive(id: string, active: boolean) {
 // ── Equipo ─────────────────────────────────────────────────────────────────
 
 export async function createBarber(_s: FormResult, formData: FormData): Promise<FormResult> {
-  const { shop } = await requireShop();
+  const { shop, isOwner } = await requireShop();
+  if (!isOwner) return { error: "No tienes permiso para esta acción." };
   const name = z.string().trim().min(2).max(60).safeParse(formData.get("name"));
   if (!name.success) return { errors: { name: ["Escribe un nombre."] } };
+
+  const rawPhone = String(formData.get("phone") ?? "").trim();
+  const phone = rawPhone ? normalizePhone(rawPhone, shop.countryCode) : null;
+  if (rawPhone && !phone) return { errors: { phone: ["Número no válido."] } };
 
   // Copiamos el horario del primer barbero para no empezar de cero.
   const template = await db.barber.findFirst({
@@ -62,6 +69,7 @@ export async function createBarber(_s: FormResult, formData: FormData): Promise<
     data: {
       shopId: shop.id,
       name: name.data,
+      phone,
       workingHours: {
         create: (template?.workingHours ?? []).map(({ weekday, startMin, endMin }) => ({ weekday, startMin, endMin })),
       },
@@ -72,13 +80,22 @@ export async function createBarber(_s: FormResult, formData: FormData): Promise<
 }
 
 export async function updateBarber(_s: FormResult, formData: FormData): Promise<FormResult> {
-  const { shop } = await requireShop();
+  const { shop, isOwner, barberId } = await requireShop();
   const id = String(formData.get("id") ?? "");
-  const name = z.string().trim().min(2).max(60).safeParse(formData.get("name"));
-  if (!name.success) return { errors: { name: ["Escribe un nombre."] } };
-
+  if (!isOwner && (!barberId || id !== barberId)) return { error: "No tienes permiso para esta acción." };
   const barber = await db.barber.findFirst({ where: { id, shopId: shop.id } });
   if (!barber) return { error: "Barbero no encontrado." };
+
+  // STAFF solo puede modificar el horario; ignoramos los demás campos recibidos.
+  let profile = {};
+  if (isOwner) {
+    const name = z.string().trim().min(2).max(60).safeParse(formData.get("name"));
+    if (!name.success) return { errors: { name: ["Escribe un nombre."] } };
+    const rawPhone = String(formData.get("phone") ?? "").trim();
+    const phone = rawPhone ? normalizePhone(rawPhone, shop.countryCode) : null;
+    if (rawPhone && !phone) return { errors: { phone: ["Número no válido."] } };
+    profile = { name: name.data, active: formData.get("active") === "on", phone };
+  }
 
   // El formulario envía, por día, una lista de franjas "HH:MM-HH:MM".
   const hours: { weekday: number; startMin: number; endMin: number }[] = [];
@@ -102,7 +119,7 @@ export async function updateBarber(_s: FormResult, formData: FormData): Promise<
   }
 
   await db.$transaction([
-    db.barber.update({ where: { id }, data: { name: name.data, active: formData.get("active") === "on" } }),
+    db.barber.update({ where: { id, shopId: shop.id }, data: profile }),
     db.workingHours.deleteMany({ where: { barberId: id } }),
     db.workingHours.createMany({ data: hours.map((h) => ({ ...h, barberId: id })) }),
   ]);
@@ -112,8 +129,9 @@ export async function updateBarber(_s: FormResult, formData: FormData): Promise<
 }
 
 export async function addTimeOff(_s: FormResult, formData: FormData): Promise<FormResult> {
-  const { shop } = await requireShop();
+  const { shop, isOwner, barberId: ownBarberId } = await requireShop();
   const barberId = String(formData.get("barberId") ?? "");
+  if (!isOwner && (!ownBarberId || barberId !== ownBarberId)) return { error: "No tienes permiso para esta acción." };
   const barber = await db.barber.findFirst({ where: { id: barberId, shopId: shop.id } });
   if (!barber) return { error: "Barbero no encontrado." };
 
@@ -136,9 +154,10 @@ export async function addTimeOff(_s: FormResult, formData: FormData): Promise<Fo
 }
 
 export async function deleteTimeOff(id: string) {
-  const { shop } = await requireShop();
+  const { shop, isOwner, barberId } = await requireShop();
   const item = await db.timeOff.findFirst({ where: { id, barber: { shopId: shop.id } } });
   if (!item) return;
+  if (!isOwner && (!barberId || item.barberId !== barberId)) return { error: "No tienes permiso para esta acción." };
   await db.timeOff.delete({ where: { id } });
   revalidatePath(`/panel/equipo/${item.barberId}`);
 }
@@ -148,10 +167,14 @@ export async function deleteTimeOff(id: string) {
 const STATUSES = ["BOOKED", "COMPLETED", "CANCELLED", "NO_SHOW"] as const;
 
 export async function setAppointmentStatus(id: string, status: (typeof STATUSES)[number]) {
-  const { shop } = await requireShop();
+  const { shop, isOwner, barberId } = await requireShop();
+  if (!isOwner && !barberId) return { error: "No tienes permiso para esta acción." };
   if (!STATUSES.includes(status)) return { error: "Estado no válido." };
   try {
-    await db.appointment.updateMany({ where: { id, shopId: shop.id }, data: { status } });
+    const { count } = await db.appointment.updateMany({
+      where: { id, shopId: shop.id, ...(!isOwner ? { barberId: barberId! } : {}) }, data: { status },
+    });
+    if (!count) return { error: "No tienes permiso para esta acción." };
   } catch {
     // Reactivar una cita cancelada puede chocar con otra que ocupó su hueco.
     return { error: "Ese horario ya está ocupado por otra cita." };
@@ -182,7 +205,8 @@ const SettingsSchema = z.object({
 const RESERVED_SLUGS = new Set(["panel", "api", "registro", "ingresar", "cita", "admin", "b"]);
 
 export async function saveSettings(_s: FormResult, formData: FormData): Promise<FormResult> {
-  const { shop } = await requireShop();
+  const { shop, isOwner } = await requireShop();
+  if (!isOwner) return { error: "No tienes permiso para esta acción." };
   const parsed = SettingsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
   const data = parsed.data;

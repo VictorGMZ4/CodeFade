@@ -10,7 +10,7 @@ export const getUser = cache(async () => {
   if (!session) return null;
   return db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, mustChangePassword: true },
   });
 });
 
@@ -21,6 +21,7 @@ export const getUser = cache(async () => {
 export const requireShop = cache(async () => {
   const user = await getUser();
   if (!user) redirect("/ingresar");
+  if (user.mustChangePassword) redirect("/cambiar-contrasena");
 
   const membership = await db.membership.findFirst({
     where: { userId: user.id },
@@ -29,5 +30,16 @@ export const requireShop = cache(async () => {
   });
   if (!membership) redirect("/registro");
 
-  return { user, shop: membership.shop, role: membership.role };
+  const barber = await db.barber.findFirst({
+    where: { shopId: membership.shopId, userId: user.id },
+    select: { id: true },
+  });
+  return { user, shop: membership.shop, role: membership.role, barberId: barber?.id ?? null, isOwner: membership.role === "OWNER" };
 });
+
+/** Acceso exclusivo del dueño para páginas del panel. */
+export async function requireOwner() {
+  const context = await requireShop();
+  if (!context.isOwner) redirect("/panel");
+  return context;
+}

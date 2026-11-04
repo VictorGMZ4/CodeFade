@@ -6,6 +6,7 @@ import * as z from "zod";
 import { db } from "@/lib/db";
 import { createSession, deleteSession } from "@/lib/session";
 import { slugify } from "@/lib/format";
+import { getUser } from "@/lib/auth";
 
 export type AuthState = { errors?: Record<string, string[] | undefined>; message?: string } | undefined;
 
@@ -96,6 +97,25 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
   if (!user || !valid) return { message: "Correo o contraseña incorrectos." };
 
   await createSession(user.id);
+  redirect(user.mustChangePassword ? "/cambiar-contrasena" : "/panel");
+}
+
+const PasswordSchema = z.object({
+  password: z.string().min(8, { error: "Mínimo 8 caracteres." }).max(100),
+  confirmation: z.string(),
+}).refine((data) => data.password === data.confirmation, {
+  path: ["confirmation"], error: "Las contraseñas deben coincidir.",
+});
+
+export async function changePassword(_state: AuthState, formData: FormData): Promise<AuthState> {
+  const user = await getUser();
+  if (!user) redirect("/ingresar");
+  const parsed = PasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
+  await db.user.update({
+    where: { id: user.id },
+    data: { passwordHash: await bcrypt.hash(parsed.data.password, 12), mustChangePassword: false },
+  });
   redirect("/panel");
 }
 

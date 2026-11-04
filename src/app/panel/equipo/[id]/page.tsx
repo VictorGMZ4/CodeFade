@@ -8,6 +8,7 @@ import { Card } from "@/components/ui";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDayShort, formatTime, localDay } from "@/lib/time";
+import { AccessForm } from "./access-form";
 import { BarberForm } from "./barber-form";
 import { TimeOffForm } from "./time-off-form";
 
@@ -23,10 +24,12 @@ export default function BarberPage(props: PageProps<"/panel/equipo/[id]">) {
 
 async function BarberPageContent({ params }: PageProps<"/panel/equipo/[id]">) {
   const { id } = await params;
-  const { shop } = await requireShop();
+  const { shop, user, isOwner, barberId } = await requireShop();
+  if (!isOwner && id !== barberId) notFound();
   const barber = await db.barber.findFirst({
     where: { id, shopId: shop.id },
     include: {
+      user: { select: { id: true, email: true } },
       workingHours: { orderBy: { startMin: "asc" } },
       timeOff: { where: { endsAt: { gt: new Date() } }, orderBy: { startsAt: "asc" } },
     },
@@ -37,17 +40,19 @@ async function BarberPageContent({ params }: PageProps<"/panel/equipo/[id]">) {
 
   return (
     <>
-      <Link href="/panel/equipo" className="press inline-block text-sm text-muted mb-3">
+      {isOwner && <Link href="/panel/equipo" className="press inline-block text-sm text-muted mb-3">
         ‹ Equipo
-      </Link>
+      </Link>}
       <h1 className="font-display text-[28px] leading-tight tracking-tight mb-6">{barber.name}</h1>
 
       <div className="grid gap-6 md:grid-cols-[1fr_340px] md:items-start">
         <Card className="p-5">
           <BarberForm
+            isOwner={isOwner}
             barber={{
               id: barber.id,
               name: barber.name,
+              phone: barber.phone,
               active: barber.active,
               hours: barber.workingHours.map(({ weekday, startMin, endMin }) => ({ weekday, startMin, endMin })),
             }}
@@ -71,7 +76,7 @@ async function BarberPageContent({ params }: PageProps<"/panel/equipo/[id]">) {
                       </p>
                       {t.reason && <p className="text-muted">{t.reason}</p>}
                     </div>
-                    <form action={deleteTimeOff.bind(null, t.id)}>
+                    <form action={async () => { "use server"; await deleteTimeOff(t.id); }}>
                       <button className="press text-muted hover:text-danger" aria-label="Eliminar ausencia">
                         ✕
                       </button>
@@ -84,6 +89,10 @@ async function BarberPageContent({ params }: PageProps<"/panel/equipo/[id]">) {
           <TimeOffForm barberId={barber.id} today={localDay(new Date(), tz)} />
         </Card>
       </div>
+      {isOwner && <Card className="p-5 mt-6">
+        <h2 className="font-medium mb-4">Acceso al panel</h2>
+        <AccessForm key={barber.userId ?? "sin-acceso"} barberId={barber.id} account={barber.user} isSelf={barber.userId === user.id} canLinkSelf={!barberId} />
+      </Card>}
     </>
   );
 }

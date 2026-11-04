@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import Link from "next/link";
-import { Card, cx } from "@/components/ui";
+import { Card, Notice, cx } from "@/components/ui";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
@@ -37,18 +37,19 @@ export default function AgendaPage(props: PageProps<"/panel">) {
 }
 
 async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
-  const { shop } = await requireShop();
+  const { shop, isOwner, barberId } = await requireShop();
+  if (!isOwner && !barberId) return <Notice>Tu cuenta no está vinculada a ningún barbero. Pídeselo al dueño.</Notice>;
   const params = await searchParams;
   const tz = shop.timezone;
   const today = localDay(new Date(), tz);
   const day = typeof params.dia === "string" && isValidDay(params.dia) ? params.dia : today;
-  const barberFilter = typeof params.barbero === "string" ? params.barbero : null;
+  const barberFilter = isOwner ? (typeof params.barbero === "string" ? params.barbero : null) : barberId;
 
   const dayStart = localToUtc(day, 0, tz);
   const dayEnd = localToUtc(addDaysToDay(day, 1, tz), 0, tz);
 
   const [barbers, appointments, serviceCount] = await Promise.all([
-    db.barber.findMany({ where: { shopId: shop.id, active: true }, orderBy: { createdAt: "asc" } }),
+    isOwner ? db.barber.findMany({ where: { shopId: shop.id, active: true }, orderBy: { createdAt: "asc" } }) : Promise.resolve([]),
     db.appointment.findMany({
       where: {
         shopId: shop.id,
@@ -113,7 +114,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
         </ul>
       </nav>
 
-      {barbers.length > 1 && (
+      {isOwner && barbers.length > 1 && (
         <div className="-mx-4 px-4 mb-5 overflow-x-auto scrollbar-none">
           <div className="flex gap-2 w-max">
             {[{ id: null, name: "Todos" }, ...barbers].map((b) => (
@@ -141,7 +142,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
       {appointments.length === 0 ? (
         <Card className="p-6 text-center">
           <p className="font-medium">No hay citas este día</p>
-          {serviceCount === 0 ? (
+          {isOwner && serviceCount === 0 ? (
             <p className="text-muted mt-1">
               Primero{" "}
               <Link href="/panel/servicios" className="font-semibold text-accent-ink underline underline-offset-4">

@@ -15,7 +15,10 @@ npm run dev
 ```
 
 - Reserva de ejemplo: http://localhost:3000/b/demo
-- Panel: http://localhost:3000/ingresar → `demo@codefade.test` / `demo1234`
+- Panel del dueño (Andrés): http://localhost:3000/ingresar → `demo@codefade.test` / `demo1234`
+- Panel del barbero (Camilo): http://localhost:3000/ingresar → `camilo@codefade.test` / `demo1234`
+
+El dueño administra toda la barbería y los accesos; el barbero solo ve sus citas y gestiona su horario y ausencias.
 
 Copia `.env.example` a `.env` y genera `SESSION_SECRET` y `CRON_SECRET` (`openssl rand -base64 32`).
 
