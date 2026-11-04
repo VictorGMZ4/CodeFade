@@ -149,7 +149,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
         <p className="text-[13px] text-muted text-center pb-10 -mt-24">
           Reservas con{" "}
           <Link href="/" className="underline underline-offset-2">
-            Turno
+            CodeFade
           </Link>
         </p>
       </div>

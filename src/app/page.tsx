@@ -15,14 +15,14 @@ import { StartDialog } from "./_landing/start-dialog";
 const DEMO_SLUG = "demo";
 
 const FAQ = [
-  ["¿Tengo que instalar algo?", "No. Turno funciona en el navegador del móvil o del ordenador, para ti y para tus clientes."],
+  ["¿Tengo que instalar algo?", "No. CodeFade funciona en el navegador del móvil o del ordenador, para ti y para tus clientes."],
   ["¿Mis clientes necesitan crear una cuenta?", "No. Reservan con su nombre y su WhatsApp, y reciben un enlace para ver o cancelar la cita."],
   ["¿Qué pasa si dos clientes eligen la misma hora?", "Solo uno se la lleva. El horario se comprueba al confirmar y al otro cliente se le pide que elija otro."],
   ["¿Puedo tener varios barberos?", "Sí. Cada uno tiene su horario y su agenda, y el cliente puede elegir con quién o dejar que le toque el primero libre."],
   ["¿Y la hora del almuerzo?", "Cada día admite varias franjas, por ejemplo de 9:00 a 13:00 y de 14:00 a 19:00. En la pausa no se puede reservar."],
   ["¿Puedo cerrar unos días por vacaciones?", "Sí. Bloqueas días enteros o unas horas para cada barbero y esos huecos desaparecen de la reserva."],
   ["¿Cómo llega el recordatorio?", "Por WhatsApp y, si el cliente dejó su correo, también por email. Tú decides con cuántas horas de antelación."],
-  ["¿En qué países funciona?", "En cualquiera. Al crear la barbería eliges el país y Turno usa su hora, su moneda y su prefijo telefónico."],
+  ["¿En qué países funciona?", "En cualquiera. Al crear la barbería eliges el país y CodeFade usa su hora, su moneda y su prefijo telefónico."],
 ];
 
 // La portada es estática; solo la comprobación de sesión y la reserva de
@@ -92,7 +92,7 @@ export default function Home() {
       <header className="sticky top-0 z-30 bg-paper/90 backdrop-blur pt-[env(safe-area-inset-top)]">
         <nav className="max-w-[1200px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-8">
           <Link href="/" className="font-display text-[22px] mr-auto">
-            Turno
+            CodeFade
           </Link>
           <div className="hidden md:flex gap-7 text-[15px] font-semibold">
             <a href="#como-funciona" className="press hover:text-accent-ink">Cómo funciona</a>
@@ -119,7 +119,7 @@ export default function Home() {
               Reservas online para tu barbería
             </h1>
             <p className="text-[19px] sm:text-[20px] leading-[1.5] text-muted mt-6 max-w-[38ch]">
-              Tus clientes eligen servicio, barbero y hora desde el móvil. Tú ves la agenda del equipo y Turno les
+              Tus clientes eligen servicio, barbero y hora desde el móvil. Tú ves la agenda del equipo y CodeFade les
               recuerda la cita por WhatsApp.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mt-9">
@@ -211,7 +211,7 @@ function Features() {
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
         <SectionHeader
           id="funciones"
-          title="Lo que Turno hace por ti"
+          title="Lo que CodeFade hace por ti"
           text="Todo lo que hoy resuelves por chat, en una agenda que se ordena sola."
         />
         <div className="mt-16 grid gap-20 md:gap-28">
@@ -408,7 +408,7 @@ function Footer() {
     <footer className="bg-surface border-t border-line">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-12 pb-[max(3rem,env(safe-area-inset-bottom))] grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
-          <p className="font-display text-[22px]">Turno</p>
+          <p className="font-display text-[22px]">CodeFade</p>
           <p className="text-[15px] text-muted mt-2 max-w-[32ch]">Agenda y reservas online para barberías.</p>
         </div>
         <div>

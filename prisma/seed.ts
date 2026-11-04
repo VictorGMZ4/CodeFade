@@ -1,5 +1,5 @@
 // Datos de ejemplo: barbería "demo" con dos barberos, servicios y algunas citas.
-// Cuenta: demo@turno.test / demo1234
+// Cuenta: demo@codefade.test / demo1234
 import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
@@ -17,10 +17,10 @@ const HOURS = [1, 2, 3, 4, 5, 6].flatMap((weekday) => [
 
 async function main() {
   await db.shop.deleteMany({ where: { slug: "demo" } });
-  await db.user.deleteMany({ where: { email: "demo@turno.test" } });
+  await db.user.deleteMany({ where: { email: "demo@codefade.test" } });
 
   const user = await db.user.create({
-    data: { email: "demo@turno.test", name: "Andrés", passwordHash: await bcrypt.hash("demo1234", 12) },
+    data: { email: "demo@codefade.test", name: "Andrés", passwordHash: await bcrypt.hash("demo1234", 12) },
   });
 
   const shop = await db.shop.create({
@@ -86,7 +86,7 @@ async function main() {
     }
   }
 
-  console.log("Seed listo → /b/demo · demo@turno.test / demo1234");
+  console.log("Seed listo → /b/demo · demo@codefade.test / demo1234");
 }
 
 main().finally(() => db.$disconnect());

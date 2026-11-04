@@ -1,4 +1,4 @@
-# Turno · Requisitos, métricas y estado
+# CodeFade · Requisitos, métricas y estado
 
 Verificado el 4 de noviembre de 2026 sobre la versión de producción (`next build` + `next start`), con Lighthouse 12 en móvil simulado (4G lento) y pruebas contra la base de datos local.
 

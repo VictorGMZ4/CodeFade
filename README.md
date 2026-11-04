@@ -1,4 +1,4 @@
-# Turno · Agenda para barberías
+# CodeFade · Agenda para barberías
 
 SaaS de reservas para barberías. Cada barbería se registra, configura servicios, barberos y horarios, y comparte un enlace público (`/b/<su-enlace>`) donde los clientes reservan desde el móvil. Los recordatorios salen por WhatsApp y correo.
 
@@ -15,7 +15,7 @@ npm run dev
 ```
 
 - Reserva de ejemplo: http://localhost:3000/b/demo
-- Panel: http://localhost:3000/ingresar → `demo@turno.test` / `demo1234`
+- Panel: http://localhost:3000/ingresar → `demo@codefade.test` / `demo1234`
 
 Copia `.env.example` a `.env` y genera `SESSION_SECRET` y `CRON_SECRET` (`openssl rand -base64 32`).
 
