@@ -26,17 +26,31 @@ const FAQ = [
 ];
 
 // La portada es estática; solo la comprobación de sesión y la reserva de
-// ejemplo llegan en streaming.
+// ejemplo llegan en streaming. Si la base de datos falla, la portada se
+// muestra igual: sin redirección y con un enlace en lugar de la reserva.
 async function RedirectIfSignedIn() {
-  if (await getUser()) redirect("/panel");
+  let signedIn = false;
+  try {
+    signedIn = Boolean(await getUser());
+  } catch (error) {
+    console.error("[portada] no se pudo comprobar la sesión", error);
+  }
+  // redirect() lanza una excepción propia de Next, por eso va fuera del try.
+  if (signedIn) redirect("/panel");
   return null;
 }
 
 async function DemoBooking() {
-  const shop = await db.shop.findUnique({
-    where: { slug: DEMO_SLUG },
-    include: { services: { where: { active: true }, orderBy: { createdAt: "asc" }, take: 4 } },
-  });
+  let shop;
+  try {
+    shop = await db.shop.findUnique({
+      where: { slug: DEMO_SLUG },
+      include: { services: { where: { active: true }, orderBy: { createdAt: "asc" }, take: 4 } },
+    });
+  } catch (error) {
+    console.error("[portada] no se pudo cargar la reserva de ejemplo", error);
+    return <BookingFallback />;
+  }
   if (!shop || shop.services.length === 0) return <BookingFallback />;
   return (
     <LiveBooking
@@ -55,9 +69,10 @@ async function DemoBooking() {
 
 function BookingFallback() {
   return (
-    <div className="bg-surface rounded-2xl shadow-card p-7 w-full min-h-[420px]">
+    <div className="bg-surface rounded-2xl shadow-card p-7 w-full">
       <p className="font-bold text-[18px]">Barbería El Bigote</p>
-      <Link href={`/b/${DEMO_SLUG}`} className="inline-block mt-3 underline underline-offset-4">
+      <p className="text-[15px] text-muted mt-1">La reserva de ejemplo no se puede mostrar aquí ahora mismo.</p>
+      <Link href={`/b/${DEMO_SLUG}`} className="inline-block mt-4 font-semibold text-accent-ink underline underline-offset-4">
         Abrir la reserva de ejemplo
       </Link>
     </div>
