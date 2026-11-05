@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState, type ChangeEvent } from "react";
 import { saveSettings } from "@/app/actions/panel";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
 
@@ -15,32 +15,61 @@ type Shop = {
   reminderHours: number;
 };
 
+type Values = { [K in keyof Shop]: string };
+
 export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
   const [state, action, pending] = useActionState(saveSettings, undefined);
+  // React 19 reinicia los formularios enviados con `action={...}` y los <select>
+  // vuelven a la opción con la que se cargó la página, aunque ya se haya
+  // guardado otra. Enviamos desde onSubmit para que no haya reinicio y los
+  // campos sigan mostrando lo que el usuario acaba de guardar.
+  const [values, setValues] = useState<Values>(() => ({
+    name: shop.name,
+    slug: shop.slug,
+    phone: shop.phone,
+    address: shop.address,
+    slotMinutes: String(shop.slotMinutes),
+    leadTimeMinutes: String(shop.leadTimeMinutes),
+    bookingWindowDays: String(shop.bookingWindowDays),
+    reminderHours: String(shop.reminderHours),
+  }));
+  const bind = (name: keyof Values) => ({
+    name,
+    value: values[name],
+    onChange: (ev: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setValues((v) => ({ ...v, [name]: ev.target.value })),
+  });
   const e = state?.errors ?? {};
 
   return (
-    <form action={action} className="grid gap-4 max-w-xl">
+    <form
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="grid gap-4 max-w-xl"
+    >
       {state?.error && <Notice tone="error">{state.error}</Notice>}
       <Field label="Nombre de la barbería" error={e.name}>
-        <input name="name" defaultValue={shop.name} required className={inputClass} />
+        <input {...bind("name")} required className={inputClass} />
       </Field>
       <Field label="Enlace" hint={`${base.replace(/^https?:\/\//, "")}/b/…`} error={e.slug}>
-        <input name="slug" defaultValue={shop.slug} required autoCapitalize="none" className={inputClass} />
+        <input {...bind("slug")} required autoCapitalize="none" className={inputClass} />
       </Field>
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Teléfono" error={e.phone}>
-          <input name="phone" type="tel" defaultValue={shop.phone} className={inputClass} />
+          <input {...bind("phone")} type="tel" className={inputClass} />
         </Field>
         <Field label="Dirección" error={e.address}>
-          <input name="address" defaultValue={shop.address} autoComplete="street-address" className={inputClass} />
+          <input {...bind("address")} autoComplete="street-address" className={inputClass} />
         </Field>
       </div>
 
       <h2 className="font-medium mt-4">Reglas de reserva</h2>
       <div className="grid sm:grid-cols-2 gap-4">
         <Field label="Turnos cada" error={e.slotMinutes}>
-          <select name="slotMinutes" defaultValue={shop.slotMinutes} className={inputClass}>
+          <select {...bind("slotMinutes")} className={inputClass}>
             {[5, 10, 15, 20, 30, 60].map((n) => (
               <option key={n} value={n}>
                 {n} minutos
@@ -49,7 +78,7 @@ export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
           </select>
         </Field>
         <Field label="Antelación mínima" error={e.leadTimeMinutes}>
-          <select name="leadTimeMinutes" defaultValue={shop.leadTimeMinutes} className={inputClass}>
+          <select {...bind("leadTimeMinutes")} className={inputClass}>
             {[
               [0, "Sin mínimo"],
               [30, "30 minutos"],
@@ -66,7 +95,7 @@ export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
           </select>
         </Field>
         <Field label="Reservas hasta" error={e.bookingWindowDays}>
-          <select name="bookingWindowDays" defaultValue={shop.bookingWindowDays} className={inputClass}>
+          <select {...bind("bookingWindowDays")} className={inputClass}>
             {[7, 14, 30, 60, 90].map((n) => (
               <option key={n} value={n}>
                 {n} días adelante
@@ -75,7 +104,7 @@ export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
           </select>
         </Field>
         <Field label="Recordatorio" error={e.reminderHours}>
-          <select name="reminderHours" defaultValue={shop.reminderHours} className={inputClass}>
+          <select {...bind("reminderHours")} className={inputClass}>
             {[2, 3, 6, 12, 24, 48].map((n) => (
               <option key={n} value={n}>
                 {n} horas antes
