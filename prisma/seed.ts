@@ -58,7 +58,7 @@ async function main() {
   // Unas citas para hoy y mañana (en horario laboral, saltando el domingo).
   const now = new TZDate(new Date(), TZ);
   const customers = [
-    { name: "Julián Pérez", phone: "+573001112233" },
+    { name: "Julián Pérez", phone: "+573001112233", notes: "Degradado bajo, prefiere tijera arriba." },
     { name: "Mateo Rojas", phone: "+573004445566" },
     { name: "Santiago Díaz", phone: "+573007778899" },
   ];

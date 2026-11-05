@@ -126,6 +126,7 @@ model Customer {
   // Normalizado a E.164 (+573001234567)
   phone        String?
   email        String?
+  notes        String?
   createdAt    DateTime      @default(now())
   shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
   appointments Appointment[]
@@ -171,6 +172,8 @@ model Appointment {
   customer       Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([shopId, startsAt])
+  @@index([shopId, customerId])
+  @@index([shopId, barberId, customerId])
   @@index([barberId, startsAt])
   @@index([status, reminderSentAt, startsAt])
 }

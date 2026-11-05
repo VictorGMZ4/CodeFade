@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { cx } from "@/components/ui";
 
 const LINKS = [
   { href: "/panel", label: "Agenda", icon: CalendarIcon },
-  { href: "/panel/servicios", label: "Servicios", icon: ScissorsIcon },
+  { href: "/panel/clientes", label: "Clientes", icon: CustomersIcon },
   { href: "/panel/equipo", label: "Equipo", icon: PeopleIcon },
+  { href: "/panel/servicios", label: "Servicios", icon: ScissorsIcon },
   { href: "/panel/ajustes", label: "Ajustes", icon: GearIcon },
 ] as const;
 
@@ -29,7 +30,7 @@ function CurrentNav(props: Variant) {
 }
 
 function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: string | null }) {
-  const links = role === "OWNER" ? LINKS : [LINKS[0], ...(barberId ? [{ href: `/panel/equipo/${barberId}`, label: "Mi horario", icon: CalendarIcon }] : [])];
+  const links = role === "OWNER" ? LINKS : [LINKS[0], LINKS[1], ...(barberId ? [{ href: `/panel/equipo/${barberId}`, label: "Mi horario", icon: CalendarIcon }] : [])];
   const isActive = (href: string) =>
     pathname !== null && (href === "/panel" ? pathname === href : pathname.startsWith(href));
 
@@ -55,8 +56,8 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
   }
 
   return (
-    <ul className={cx("grid", role === "OWNER" ? "grid-cols-4" : barberId ? "grid-cols-2" : "grid-cols-1")}>
-      {links.map(({ href, label, icon: Icon }) => (
+    <ul className={cx("grid", role === "OWNER" ? "grid-cols-4" : barberId ? "grid-cols-3" : "grid-cols-2")}>
+      {(role === "OWNER" ? links.slice(0, 3) : links).map(({ href, label, icon: Icon }) => (
         <li key={href}>
           <Link
             href={href}
@@ -71,8 +72,39 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
           </Link>
         </li>
       ))}
+      {role === "OWNER" && <li className="relative"><MoreMenu key={pathname} active={isActive("/panel/servicios") || isActive("/panel/ajustes")} pathname={pathname} /></li>}
     </ul>
   );
+}
+
+function MoreMenu({ active, pathname }: { active: boolean; pathname: string | null }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    function outside(event: PointerEvent) {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function escape(event: KeyboardEvent) {
+      if (event.key === "Escape") { setOpen(false); trigger.current?.focus(); }
+    }
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
+  }, [open]);
+  return <div ref={root} onBlur={event => {
+    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+  }}>
+    <button ref={trigger} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className={cx("press w-full flex flex-col items-center gap-1 pt-2.5 pb-2 text-[11px] font-medium", active ? "text-accent-ink font-bold" : "text-muted")}>
+      <svg {...iconProps}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
+      Más
+    </button>
+    {open && <ul id={id} aria-label="Más opciones" className="absolute bottom-full right-2 mb-2 w-44 rounded-xl border border-line bg-surface shadow-card p-1">
+      {LINKS.slice(3).map(({ href, label }) => <li key={href}><Link href={href} onClick={() => setOpen(false)} aria-current={pathname?.startsWith(href) ? "page" : undefined} className={cx("block rounded-lg px-4 py-3 text-sm", pathname?.startsWith(href) ? "bg-accent font-semibold text-accent-ink" : "hover:bg-raised")}>{label}</Link></li>)}
+    </ul>}
+  </div>;
 }
 
 const iconProps = {
@@ -114,6 +146,10 @@ function PeopleIcon() {
       <path d="M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.8c1.7.6 3 2.2 3.5 4.7" />
     </svg>
   );
+}
+
+function CustomersIcon() {
+  return <svg {...iconProps}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="10" cy="9" r="2.5" /><path d="M5.5 17c.6-2.2 2.1-3.5 4.5-3.5s3.9 1.3 4.5 3.5M17 8h1M17 12h1M17 16h1" /></svg>;
 }
 
 function GearIcon() {
