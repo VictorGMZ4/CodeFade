@@ -59,6 +59,7 @@ model Shop {
   services          Service[]
   customers         Customer[]
   appointments      Appointment[]
+  notifications     Notification[]
 }
 
 model Barber {
@@ -74,6 +75,7 @@ model Barber {
   workingHours WorkingHours[]
   timeOff      TimeOff[]
   appointments Appointment[]
+  notifications Notification[]
 
   @@index([shopId])
 }
@@ -155,6 +157,7 @@ model Appointment {
   // Permite al cliente cancelar desde el enlace del recordatorio
   manageToken    String            @unique
   reminderSentAt DateTime?
+  notifications  Notification[]
   createdAt      DateTime          @default(now())
   shop           Shop              @relation(fields: [shopId], references: [id], onDelete: Cascade)
   barber         Barber            @relation(fields: [barberId], references: [id], onDelete: Cascade)
@@ -164,4 +167,24 @@ model Appointment {
   @@index([shopId, startsAt])
   @@index([barberId, startsAt])
   @@index([status, reminderSentAt, startsAt])
+}
+
+enum NotificationType {
+  NEW_BOOKING
+  CLIENT_CANCELLED
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  shopId        String
+  barberId      String
+  appointmentId String
+  type          NotificationType
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+  shop          Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  barber        Barber          @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  appointment   Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([barberId, readAt, createdAt])
 }

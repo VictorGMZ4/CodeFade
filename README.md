@@ -58,6 +58,21 @@ Sin claves configuradas, los mensajes se escriben en la consola del servidor.
 - **WhatsApp:** usa la WhatsApp Cloud API de Meta. Los mensajes iniciados por el negocio necesitan una plantilla aprobada; crea una llamada `recordatorio_cita` con 5 variables: nombre, barbería, día, hora y enlace. Define `WHATSAPP_TOKEN` y `WHATSAPP_PHONE_NUMBER_ID`.
 - Desde la agenda, el barbero también puede escribir al cliente con un enlace `wa.me` desde su propio WhatsApp, sin configurar nada.
 
+### Avisos al barbero
+
+Las reservas públicas y las cancelaciones desde `/cita/[token]` guardan un aviso para el barbero asignado, incluso si todavía no tiene usuario. La campana muestra solo sus avisos, también para dueños vinculados, y se actualiza cada 30 segundos mientras la pestaña está visible. Los cambios desde la agenda no generan avisos.
+
+Si el barbero tiene teléfono, WhatsApp se envía después de responder mediante `after()`. Un fallo al guardar o enviar el aviso se registra con `[avisos]` y no impide reservar ni cancelar. Sin credenciales se escribe el mensaje con `[aviso:whatsapp]`.
+
+Crea en Meta dos plantillas aprobadas, ambas con idioma `WHATSAPP_TEMPLATE_LANG` (por defecto `es`):
+
+| Variable | Plantilla por defecto | Texto sugerido |
+| --- | --- | --- |
+| `WHATSAPP_TEMPLATE_BARBER_NEW` | `aviso_reserva_barbero` | Hola {{1}}, tienes una nueva reserva de {{2}} para {{3}} el {{4}} a las {{5}}. |
+| `WHATSAPP_TEMPLATE_BARBER_CANCEL` | `aviso_cancelacion_barbero` | Hola {{1}}, {{2}} canceló su cita de {{3}} del {{4}} a las {{5}}. |
+
+Los parámetros son, en orden: nombre del barbero, cliente, servicio, día y hora en la zona de la barbería. Se usan las mismas credenciales `WHATSAPP_TOKEN` y `WHATSAPP_PHONE_NUMBER_ID` de los recordatorios.
+
 ## Producción
 
 Usa un Postgres gestionado (Neon, Supabase, Prisma Postgres…), quita `DATABASE_POOL_MAX` (en local vale 1 porque PGlite solo acepta una conexión) y despliega con:

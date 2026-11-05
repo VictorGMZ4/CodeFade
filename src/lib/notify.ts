@@ -19,6 +19,41 @@ export type ReminderData = {
 
 type ChannelResult = { channel: "email" | "whatsapp"; ok: boolean; detail?: string };
 
+export type BarberNoticeData = {
+  type: "NEW_BOOKING" | "CLIENT_CANCELLED";
+  barberName: string;
+  barberPhone: string;
+  customerName: string;
+  serviceName: string;
+  startsAt: Date;
+  timezone: string;
+};
+
+export async function sendBarberNotice(data: BarberNoticeData): Promise<void> {
+  const token = process.env.WHATSAPP_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const day = formatDayLong(data.startsAt, data.timezone);
+  const time = formatTime(data.startsAt, data.timezone);
+  const isNew = data.type === "NEW_BOOKING";
+  if (!token || !phoneId) {
+    console.info(`[aviso:whatsapp] ${data.barberPhone}: Hola ${data.barberName}, ${isNew ? "nueva reserva" : "cancelación del cliente"}: ${data.customerName}, ${data.serviceName}, ${day} a las ${time}.`);
+    return;
+  }
+  const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp", to: data.barberPhone.replace("+", ""), type: "template",
+      template: {
+        name: isNew ? (process.env.WHATSAPP_TEMPLATE_BARBER_NEW ?? "aviso_reserva_barbero") : (process.env.WHATSAPP_TEMPLATE_BARBER_CANCEL ?? "aviso_cancelacion_barbero"),
+        language: { code: process.env.WHATSAPP_TEMPLATE_LANG ?? "es" },
+        components: [{ type: "body", parameters: [data.barberName, data.customerName, data.serviceName, day, time].map((text) => ({ type: "text", text })) }],
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`WhatsApp rechazó el aviso (${res.status}): ${await res.text()}`);
+}
+
 export async function sendReminder(data: ReminderData): Promise<ChannelResult[]> {
   const results: ChannelResult[] = [await sendWhatsApp(data)];
   if (data.customerEmail) results.push(await sendEmail(data));

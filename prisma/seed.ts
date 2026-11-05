@@ -7,7 +7,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { TZDate } from "@date-fns/tz";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL, max: Number(process.env.DATABASE_POOL_MAX ?? 10) }) });
 const TZ = "America/Bogota";
 
 const HOURS = [1, 2, 3, 4, 5, 6].flatMap((weekday) => [
@@ -75,7 +75,7 @@ async function main() {
         update: {},
       });
       const startsAt = new Date(new TZDate(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0, 0, TZ).getTime());
-      await db.appointment.create({
+      const appointment = await db.appointment.create({
         data: {
           shopId: shop.id,
           barberId: barbers[barberIdx].id,
@@ -87,6 +87,12 @@ async function main() {
           manageToken: randomBytes(18).toString("base64url"),
         },
       });
+      if (i <= 3) {
+        await db.notification.create({ data: {
+          shopId: shop.id, barberId: barbers[barberIdx].id, appointmentId: appointment.id,
+          type: "NEW_BOOKING", readAt: i === 3 ? new Date() : null,
+        } });
+      }
     }
   }
 

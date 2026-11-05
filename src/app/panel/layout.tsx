@@ -5,6 +5,7 @@ import { logout } from "@/app/actions/auth";
 import { Bar } from "@/components/skeleton";
 import { requireShop } from "@/lib/auth";
 import { PanelNav } from "./nav";
+import { NotificationBell } from "./notification-bell";
 
 // El marco es estático; el nombre y la navegación se resuelven con la sesión.
 export default function PanelLayout({ children }: LayoutProps<"/panel">) {
@@ -20,9 +21,12 @@ export default function PanelLayout({ children }: LayoutProps<"/panel">) {
           <div className="hidden md:block flex-1">
             <Suspense fallback={<Link href="/panel">Agenda</Link>}><SessionNav variant="top" /></Suspense>
           </div>
-          <form action={logout} className="ml-auto md:ml-0">
-            <button className="press text-sm text-muted hover:text-ink">Salir</button>
-          </form>
+          <div className="ml-auto md:ml-0 flex items-center gap-2">
+            <Suspense fallback={null}><SessionNotices /></Suspense>
+            <form action={logout}>
+              <button className="press text-sm text-muted hover:text-ink">Salir</button>
+            </form>
+          </div>
         </div>
       </header>
 
@@ -41,6 +45,11 @@ async function ShopName() {
   const { shop, user } = await requireShop();
   if (user.mustChangePassword) redirect("/cambiar-contrasena");
   return shop.name;
+}
+
+async function SessionNotices() {
+  const { barberId } = await requireShop();
+  return barberId ? <NotificationBell key={barberId} /> : null;
 }
 
 async function SessionNav({ variant }: { variant: "top" | "bottom" }) {

@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { db, isOverlapError } from "@/lib/db";
 import { getDaySlots } from "@/lib/availability";
+import { notifyBarber } from "@/lib/barber-notifications";
 import { addDaysToDay, localDay, localToUtc } from "@/lib/time";
 import type { Shop } from "@/generated/prisma/client";
 
@@ -66,6 +67,7 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
           manageToken: randomBytes(18).toString("base64url"),
         },
       });
+      await notifyBarber(appointment, "NEW_BOOKING");
       return { ok: true, appointmentId: appointment.id, manageToken: appointment.manageToken };
     } catch (error) {
       if (!isOverlapError(error)) throw error;
