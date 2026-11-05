@@ -23,6 +23,7 @@ export async function GET(request: Request) {
   const candidates = await db.appointment.findMany({
     where: {
       status: "BOOKED",
+      source: "ONLINE",
       reminderSentAt: null,
       startsAt: { gt: now, lte: new Date(now.getTime() + MAX_REMINDER_HOURS * 3600_000) },
     },
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
   for (const a of due) {
     // Marcamos antes de enviar: si dos crons coinciden, solo uno gana la fila.
     const claimed = await db.appointment.updateMany({
-      where: { id: a.id, reminderSentAt: null, status: "BOOKED" },
+      where: { id: a.id, reminderSentAt: null, status: "BOOKED", source: "ONLINE" },
       data: { reminderSentAt: now },
     });
     if (claimed.count === 0) continue;

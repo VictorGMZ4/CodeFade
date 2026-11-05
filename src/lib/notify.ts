@@ -6,7 +6,7 @@ import { formatDayLong, formatTime } from "@/lib/time";
 
 export type ReminderData = {
   customerName: string;
-  customerPhone: string;
+  customerPhone: string | null;
   customerEmail: string | null;
   shopName: string;
   shopAddress: string | null;
@@ -20,7 +20,7 @@ export type ReminderData = {
 type ChannelResult = { channel: "email" | "whatsapp"; ok: boolean; detail?: string };
 
 export type BarberNoticeData = {
-  type: "NEW_BOOKING" | "CLIENT_CANCELLED";
+  type: "NEW_BOOKING" | "CLIENT_CANCELLED" | "MANUAL_BY_OWNER";
   barberName: string;
   barberPhone: string;
   customerName: string;
@@ -34,7 +34,7 @@ export async function sendBarberNotice(data: BarberNoticeData): Promise<void> {
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const day = formatDayLong(data.startsAt, data.timezone);
   const time = formatTime(data.startsAt, data.timezone);
-  const isNew = data.type === "NEW_BOOKING";
+  const isNew = data.type === "NEW_BOOKING" || data.type === "MANUAL_BY_OWNER";
   if (!token || !phoneId) {
     console.info(`[aviso:whatsapp] ${data.barberPhone}: Hola ${data.barberName}, ${isNew ? "nueva reserva" : "cancelación del cliente"}: ${data.customerName}, ${data.serviceName}, ${day} a las ${time}.`);
     return;
@@ -55,7 +55,7 @@ export async function sendBarberNotice(data: BarberNoticeData): Promise<void> {
 }
 
 export async function sendReminder(data: ReminderData): Promise<ChannelResult[]> {
-  const results: ChannelResult[] = [await sendWhatsApp(data)];
+  const results: ChannelResult[] = data.customerPhone ? [await sendWhatsApp({ ...data, customerPhone: data.customerPhone })] : [];
   if (data.customerEmail) results.push(await sendEmail(data));
   return results;
 }
@@ -66,7 +66,7 @@ function describe(data: ReminderData) {
   return { day, time };
 }
 
-async function sendWhatsApp(data: ReminderData): Promise<ChannelResult> {
+async function sendWhatsApp(data: ReminderData & { customerPhone: string }): Promise<ChannelResult> {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const { day, time } = describe(data);

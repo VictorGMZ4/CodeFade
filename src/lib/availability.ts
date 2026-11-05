@@ -17,6 +17,8 @@ export type Slot = {
   barberIds: string[];
 };
 
+export type SlotOptions = { ignoreLeadTime?: boolean; windowDays?: number };
+
 /** Primer y último día local reservables según las reglas de la barbería. */
 export function bookableRange(shop: ShopRules, now = new Date()) {
   const first = localDay(new Date(now.getTime() + shop.leadTimeMinutes * 60_000), shop.timezone);
@@ -44,9 +46,11 @@ export async function getSlots(
   durationMin: number,
   barberIds: string[],
   now = new Date(),
+  options: SlotOptions = {},
 ): Promise<Map<string, Slot[]>> {
   const result = new Map<string, Slot[]>();
-  const { first, last } = bookableRange(shop, now);
+  const rules = { ...shop, leadTimeMinutes: options.ignoreLeadTime ? 0 : shop.leadTimeMinutes, bookingWindowDays: options.windowDays ?? shop.bookingWindowDays };
+  const { first, last } = bookableRange(rules, now);
   const valid = [...new Set(days)].filter((d) => d >= first && d <= last).sort();
   if (barberIds.length === 0 || valid.length === 0) return result;
 
@@ -77,7 +81,7 @@ export async function getSlots(
     busy.set(b.barberId, list);
   }
 
-  const earliest = now.getTime() + shop.leadTimeMinutes * 60_000;
+  const earliest = now.getTime() + rules.leadTimeMinutes * 60_000;
   const durationMs = durationMin * 60_000;
 
   for (const day of valid) {
@@ -113,6 +117,7 @@ export async function getDaySlots(
   durationMin: number,
   barberIds: string[],
   now = new Date(),
+  options: SlotOptions = {},
 ): Promise<Slot[]> {
-  return (await getSlots(shop, [day], durationMin, barberIds, now)).get(day) ?? [];
+  return (await getSlots(shop, [day], durationMin, barberIds, now, options)).get(day) ?? [];
 }

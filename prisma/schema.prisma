@@ -124,7 +124,7 @@ model Customer {
   shopId       String
   name         String
   // Normalizado a E.164 (+573001234567)
-  phone        String
+  phone        String?
   email        String?
   createdAt    DateTime      @default(now())
   shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
@@ -140,6 +140,11 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
+enum AppointmentSource {
+  ONLINE
+  MANUAL
+}
+
 // La migración añade una restricción de exclusión que impide que un barbero
 // tenga dos citas BOOKED solapadas, incluso con reservas simultáneas.
 model Appointment {
@@ -151,6 +156,7 @@ model Appointment {
   startsAt       DateTime
   endsAt         DateTime
   status         AppointmentStatus @default(BOOKED)
+  source         AppointmentSource @default(ONLINE)
   // Copia del precio al reservar, para que cambiar la tarifa no altere el histórico
   priceCents     Int
   notes          String?
@@ -172,6 +178,7 @@ model Appointment {
 enum NotificationType {
   NEW_BOOKING
   CLIENT_CANCELLED
+  MANUAL_BY_OWNER
 }
 
 model Notification {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import Link from "next/link";
-import { Card, Notice, cx } from "@/components/ui";
+import { Badge, Card, Notice, buttonClass, cx } from "@/components/ui";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
@@ -72,18 +72,21 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
 
   return (
     <>
-      <div className="flex items-end justify-between gap-4 mb-4">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-4">
         <div>
           <p className="text-sm text-muted">{day === today ? "Hoy" : day === addDaysToDay(today, 1, tz) ? "Mañana" : " "}</p>
           <h1 className="font-display text-[28px] leading-tight tracking-tight first-letter:uppercase">
             {formatDayLong(dayStart, tz)}
           </h1>
         </div>
+        <div className="flex items-center gap-3">
+        <Link href={`/panel/citas/nueva?dia=${day}`} className={buttonClass("primary")}>Nueva cita</Link>
         {day !== today && (
           <Link href={href(today)} className="press text-sm text-accent-ink shrink-0">
             Ir a hoy
           </Link>
         )}
+        </div>
       </div>
 
       {/* Tira de días: scroll horizontal nativo con snap */}
@@ -172,7 +175,10 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
                   </div>
                   <div className="flex-1 min-w-0 grid gap-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-semibold truncate">{a.customer.name}</p>
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <p className="font-semibold truncate">{a.customer.name}</p>
+                        {a.source === "MANUAL" && <Badge>Manual</Badge>}
+                      </div>
                       <span className={cx("text-xs font-semibold rounded-full px-2.5 py-0.5 shrink-0", status.className)}>{status.text}</span>
                     </div>
                     <p className="text-sm text-muted truncate">
@@ -180,7 +186,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
                     </p>
                     {a.notes && <p className="text-sm bg-paper rounded-lg px-2.5 py-1.5">“{a.notes}”</p>}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1 text-sm">
-                      <a
+                      {a.customer.phone && <><a
                         href={whatsappLink(a.customer.phone, message)}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -190,7 +196,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
                       </a>
                       <a href={`tel:${a.customer.phone}`} className="press text-muted">
                         {a.customer.phone}
-                      </a>
+                      </a></>}
                       <AppointmentActions id={a.id} status={a.status} isPast={a.startsAt < new Date()} />
                     </div>
                   </div>

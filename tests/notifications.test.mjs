@@ -57,7 +57,7 @@ test("Sin barbero vinculado no se consulta ni se modifica ningún aviso", async 
 });
 
 test("WhatsApp usa plantilla, destinatario y cinco parámetros en hora local", async () => {
-  for (const type of ["NEW_BOOKING", "CLIENT_CANCELLED"]) {
+  for (const type of ["NEW_BOOKING", "CLIENT_CANCELLED", "MANUAL_BY_OWNER"]) {
     let payload;
     const api = load("src/lib/notify.ts", { "server-only": {}, "@/lib/time": time }, {
       process: { env: { WHATSAPP_TOKEN: "test", WHATSAPP_PHONE_NUMBER_ID: "phone", WHATSAPP_TEMPLATE_BARBER_NEW: "nueva", WHATSAPP_TEMPLATE_BARBER_CANCEL: "cancelada" } },
@@ -65,7 +65,7 @@ test("WhatsApp usa plantilla, destinatario y cinco parámetros en hora local", a
     });
     await api.sendBarberNotice({ type, barberPhone: "+573001234567", barberName: "Andrés", customerName: "Cliente", serviceName: "Corte", startsAt: new Date("2026-11-05T02:00:00Z"), timezone: shop.timezone });
     assert.equal(payload.to, "573001234567");
-    assert.equal(payload.template.name, type === "NEW_BOOKING" ? "nueva" : "cancelada");
+    assert.equal(payload.template.name, type === "CLIENT_CANCELLED" ? "cancelada" : "nueva");
     assert.deepEqual(payload.template.components[0].parameters.map((p) => p.text), ["Andrés", "Cliente", "Corte", "miércoles 4 de noviembre", "21:00"]);
   }
 });
@@ -117,5 +117,37 @@ test("Un fallo al guardar el aviso no falla la reserva y WhatsApp se difiere", a
   assert.equal(sent, 0);
   assert.equal(deferred.length, 1);
   await deferred[0]();
+  assert.equal(sent, 1);
+});
+
+test("Sin teléfono el recordatorio no intenta WhatsApp", async () => {
+  let requests = 0;
+  const api = load("src/lib/notify.ts", { "server-only": {}, "@/lib/time": time }, {
+    process: { env: { WHATSAPP_TOKEN: "test", WHATSAPP_PHONE_NUMBER_ID: "phone" } },
+    fetch: async () => { requests++; return { ok: true }; },
+  });
+  const results = await api.sendReminder({ customerPhone: null, customerEmail: null });
+  assert.equal(results.length, 0);
+  assert.equal(requests, 0);
+});
+
+test("El cron solo consulta y reclama citas ONLINE", async () => {
+  let query;
+  let claim;
+  let sent = 0;
+  const api = load("src/app/api/cron/reminders/route.ts", {
+    "@/lib/db": { db: { appointment: {
+      findMany: async ({ where }) => {
+        query = where;
+        return [{ id: "online", startsAt: new Date(Date.now() + 3600000), shop: { reminderHours: 24 }, customer: {}, service: {}, barber: {} }];
+      },
+      updateMany: async ({ where }) => { claim = where; return { count: 1 }; },
+    } } },
+    "@/lib/notify": { sendReminder: async () => { sent++; return [{ ok: true }]; } },
+  }, { process: { env: { CRON_SECRET: "secret" } }, Buffer, Response, URL });
+  const response = await api.GET(new Request("https://example.test/api/cron/reminders", { headers: { authorization: "Bearer secret" } }));
+  assert.equal(response.status, 200);
+  assert.equal(query.source, "ONLINE");
+  assert.equal(claim.source, "ONLINE");
   assert.equal(sent, 1);
 });

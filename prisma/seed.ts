@@ -96,6 +96,18 @@ async function main() {
     }
   }
 
+  // A las 12 queda una franja libre para Andrés, incluso con el servicio más largo.
+  const manualDay = new TZDate(now.getFullYear(), now.getMonth(), now.getDate() + (now.getDay() === 0 ? 1 : 0), 12, 0, 0, TZ);
+  const walkIn = await db.customer.create({ data: { shopId: shop.id, name: "Cliente de paso", phone: null } });
+  const manualService = shop.services[0];
+  const manualStart = new Date(manualDay.getTime());
+  await db.appointment.create({ data: {
+    shopId: shop.id, barberId: barbers[0].id, serviceId: manualService.id, customerId: walkIn.id,
+    source: "MANUAL", startsAt: manualStart,
+    endsAt: new Date(manualStart.getTime() + manualService.durationMin * 60_000),
+    priceCents: manualService.priceCents, manageToken: randomBytes(18).toString("base64url"),
+  } });
+
   console.log("Seed listo → /b/demo · demo@codefade.test y camilo@codefade.test / demo1234");
 }
 
