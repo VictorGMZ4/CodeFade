@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useState, type ChangeEvent } from "react";
 import { saveSettings } from "@/app/actions/panel";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
+import { RuleField } from "./rule-field";
 
 type Shop = {
   name: string;
@@ -39,6 +40,11 @@ export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
     onChange: (ev: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setValues((v) => ({ ...v, [name]: ev.target.value })),
   });
+  const rule = (name: keyof Values) => ({
+    name,
+    value: values[name],
+    onChange: (value: string) => setValues((v) => ({ ...v, [name]: value })),
+  });
   const e = state?.errors ?? {};
 
   return (
@@ -68,50 +74,50 @@ export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
 
       <h2 className="font-medium mt-4">Reglas de reserva</h2>
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Turnos cada" error={e.slotMinutes}>
-          <select {...bind("slotMinutes")} className={inputClass}>
-            {[5, 10, 15, 20, 30, 60].map((n) => (
-              <option key={n} value={n}>
-                {n} minutos
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Antelación mínima" error={e.leadTimeMinutes}>
-          <select {...bind("leadTimeMinutes")} className={inputClass}>
-            {[
-              [0, "Sin mínimo"],
-              [30, "30 minutos"],
-              [60, "1 hora"],
-              [120, "2 horas"],
-              [240, "4 horas"],
-              [720, "12 horas"],
-              [1440, "1 día"],
-            ].map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Reservas hasta" error={e.bookingWindowDays}>
-          <select {...bind("bookingWindowDays")} className={inputClass}>
-            {[7, 14, 30, 60, 90].map((n) => (
-              <option key={n} value={n}>
-                {n} días adelante
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Recordatorio" error={e.reminderHours}>
-          <select {...bind("reminderHours")} className={inputClass}>
-            {[2, 3, 6, 12, 24, 48].map((n) => (
-              <option key={n} value={n}>
-                {n} horas antes
-              </option>
-            ))}
-          </select>
-        </Field>
+        <RuleField
+          label="Turnos cada"
+          {...rule("slotMinutes")}
+          presets={[5, 10, 15, 20, 30, 60].map((n) => ({ value: n, label: `${n} minutos` }))}
+          units={[{ label: "minutos", factor: 1 }]}
+          limits="Entre 5 y 120 minutos."
+          error={e.slotMinutes}
+        />
+        <RuleField
+          label="Antelación mínima"
+          {...rule("leadTimeMinutes")}
+          presets={[
+            { value: 0, label: "Sin mínimo" },
+            { value: 30, label: "30 minutos" },
+            { value: 60, label: "1 hora" },
+            { value: 120, label: "2 horas" },
+            { value: 240, label: "4 horas" },
+            { value: 720, label: "12 horas" },
+            { value: 1440, label: "1 día" },
+          ]}
+          units={[
+            { label: "minutos", factor: 1 },
+            { label: "horas", factor: 60 },
+            { label: "días", factor: 1440 },
+          ]}
+          limits="Entre 0 minutos y 7 días."
+          error={e.leadTimeMinutes}
+        />
+        <RuleField
+          label="Reservas hasta"
+          {...rule("bookingWindowDays")}
+          presets={[3, 7, 10, 14, 15].map((n) => ({ value: n, label: `${n} días adelante` }))}
+          units={[{ label: "días", factor: 1 }]}
+          limits="Entre 1 y 15 días."
+          error={e.bookingWindowDays}
+        />
+        <RuleField
+          label="Recordatorio"
+          {...rule("reminderHours")}
+          presets={[2, 3, 6, 12, 24, 48].map((n) => ({ value: n, label: `${n} horas antes` }))}
+          units={[{ label: "horas", factor: 1 }]}
+          limits="Entre 1 y 72 horas antes."
+          error={e.reminderHours}
+        />
       </div>
       <div className="flex items-center gap-3 mt-2">
         <Button type="submit" disabled={pending}>

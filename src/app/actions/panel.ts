@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { BOOKING_RULES, type BookingRule } from "@/lib/booking-rules";
 import { normalizePhone, parsePrice, slugify } from "@/lib/format";
 import { hhmmToMinutes, localToUtc } from "@/lib/time";
 
@@ -196,11 +197,20 @@ const SettingsSchema = z.object({
     .regex(/^[a-z0-9-]+$/, { error: "Solo letras, números y guiones." }),
   phone: z.string().trim().max(30).optional(),
   address: z.string().trim().max(120).optional(),
-  slotMinutes: z.coerce.number().int().refine((n) => [5, 10, 15, 20, 30, 60].includes(n)),
-  leadTimeMinutes: z.coerce.number().int().min(0).max(7 * 24 * 60),
-  bookingWindowDays: z.coerce.number().int().min(1).max(180),
-  reminderHours: z.coerce.number().int().min(1).max(72),
+  slotMinutes: ruleField("slotMinutes", "Entre 5 y 120 minutos."),
+  leadTimeMinutes: ruleField("leadTimeMinutes", "Entre 0 minutos y 7 días."),
+  bookingWindowDays: ruleField("bookingWindowDays", "Entre 1 y 15 días."),
+  reminderHours: ruleField("reminderHours", "Entre 1 y 72 horas."),
 });
+
+function ruleField(rule: BookingRule, message: string) {
+  const { min, max } = BOOKING_RULES[rule];
+  return z.coerce
+    .number({ error: "Escribe un número." })
+    .int({ error: "Usa un número entero." })
+    .min(min, { error: message })
+    .max(max, { error: message });
+}
 
 const RESERVED_SLUGS = new Set(["panel", "api", "registro", "ingresar", "cita", "admin", "b"]);
 

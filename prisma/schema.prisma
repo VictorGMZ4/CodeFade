@@ -50,7 +50,7 @@ model Shop {
   // Antelación mínima para reservar, en minutos
   leadTimeMinutes   Int           @default(60)
   // Hasta cuántos días hacia adelante se puede reservar
-  bookingWindowDays Int           @default(30)
+  bookingWindowDays Int           @default(15)
   // Cuántas horas antes de la cita se envía el recordatorio
   reminderHours     Int           @default(24)
   createdAt         DateTime      @default(now())

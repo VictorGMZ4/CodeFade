@@ -6,6 +6,15 @@ import ts from "typescript";
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 
+// Carga un módulo TS del proyecto sin dependencias (p. ej. constantes compartidas).
+function loadModule(file) {
+  const source = fs.readFileSync(file, "utf8");
+  const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const exports = {};
+  vm.runInNewContext(output, { exports, require });
+  return exports;
+}
+
 // Ejecutamos las acciones reales con sesión y persistencia controladas.
 function actions(context, db = {}, file = "panel", extra = {}) {
   const source = fs.readFileSync(`src/app/actions/${file}.ts`, "utf8");
@@ -19,6 +28,7 @@ function actions(context, db = {}, file = "panel", extra = {}) {
       if (id === "@/lib/db") return { db };
       if (id === "next/cache") return { revalidatePath() {} };
       if (id === "@/lib/format") return { normalizePhone: () => null };
+      if (id === "@/lib/booking-rules") return loadModule("src/lib/booking-rules.ts");
       if (id === "@/lib/time") return { hhmmToMinutes: (value) => { const [h, m] = value.split(":").map(Number); return h * 60 + m; } };
       return require(id);
     },
