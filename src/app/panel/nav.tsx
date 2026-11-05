@@ -8,6 +8,7 @@ import { cx } from "@/components/ui";
 const LINKS = [
   { href: "/panel", label: "Agenda", icon: CalendarIcon },
   { href: "/panel/clientes", label: "Clientes", icon: CustomersIcon },
+  { href: "/panel/metricas", label: "Métricas", icon: MetricsIcon },
   { href: "/panel/equipo", label: "Equipo", icon: PeopleIcon },
   { href: "/panel/servicios", label: "Servicios", icon: ScissorsIcon },
   { href: "/panel/ajustes", label: "Ajustes", icon: GearIcon },
@@ -30,7 +31,7 @@ function CurrentNav(props: Variant) {
 }
 
 function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: string | null }) {
-  const links = role === "OWNER" ? LINKS : [LINKS[0], LINKS[1], ...(barberId ? [{ href: `/panel/equipo/${barberId}`, label: "Mi horario", icon: CalendarIcon }] : [])];
+  const links = role === "OWNER" ? LINKS : [LINKS[0], LINKS[1], LINKS[2], ...(barberId ? [{ href: `/panel/equipo/${barberId}`, label: "Mi horario", icon: CalendarIcon }] : [])];
   const isActive = (href: string) =>
     pathname !== null && (href === "/panel" ? pathname === href : pathname.startsWith(href));
 
@@ -56,8 +57,8 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
   }
 
   return (
-    <ul className={cx("grid", role === "OWNER" ? "grid-cols-4" : barberId ? "grid-cols-3" : "grid-cols-2")}>
-      {(role === "OWNER" ? links.slice(0, 3) : links).map(({ href, label, icon: Icon }) => (
+    <ul className={cx("grid", role === "OWNER" ? "grid-cols-5" : barberId ? "grid-cols-4" : "grid-cols-3")}>
+      {(role === "OWNER" ? links.slice(0, 4) : links).map(({ href, label, icon: Icon }) => (
         <li key={href}>
           <Link
             href={href}
@@ -102,7 +103,7 @@ function MoreMenu({ active, pathname }: { active: boolean; pathname: string | nu
       Más
     </button>
     {open && <ul id={id} aria-label="Más opciones" className="absolute bottom-full right-2 mb-2 w-44 rounded-xl border border-line bg-surface shadow-card p-1">
-      {LINKS.slice(3).map(({ href, label }) => <li key={href}><Link href={href} onClick={() => setOpen(false)} aria-current={pathname?.startsWith(href) ? "page" : undefined} className={cx("block rounded-lg px-4 py-3 text-sm", pathname?.startsWith(href) ? "bg-accent font-semibold text-accent-ink" : "hover:bg-raised")}>{label}</Link></li>)}
+      {LINKS.slice(4).map(({ href, label }) => <li key={href}><Link href={href} onClick={() => setOpen(false)} aria-current={pathname?.startsWith(href) ? "page" : undefined} className={cx("block rounded-lg px-4 py-3 text-sm", pathname?.startsWith(href) ? "bg-accent font-semibold text-accent-ink" : "hover:bg-raised")}>{label}</Link></li>)}
     </ul>}
   </div>;
 }
@@ -126,6 +127,10 @@ function CalendarIcon() {
       <path d="M3.5 10h17M8 3v4M16 3v4" />
     </svg>
   );
+}
+
+function MetricsIcon() {
+  return <svg {...iconProps}><path d="M3 3v18h18M6 15l4-5 4 3 6-8" /></svg>;
 }
 
 function ScissorsIcon() {
