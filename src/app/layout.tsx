@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 
-// Manrope: geométrica y muy legible en pantallas pequeñas.
-const text = Manrope({
+// Geist: neutra y muy legible en pantallas pequeñas.
+const text = Geist({
   variable: "--font-text",
   subsets: ["latin"],
 });
@@ -19,8 +19,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f9fc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1a2a" },
+    { media: "(prefers-color-scheme: light)", color: "#2f72d6" },
+    { media: "(prefers-color-scheme: dark)", color: "#1d4fa8" },
   ],
 };
 

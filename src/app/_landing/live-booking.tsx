@@ -8,7 +8,7 @@ import { cx } from "@/components/ui";
 type Service = { id: string; name: string; duration: string; price: string };
 
 /**
- * La reserva de la barbería de ejemplo, en vivo: elige un servicio y ve los
+ * La reserva del negocio de ejemplo, en vivo: elige un servicio y ve los
  * próximos horarios libres de verdad. Cada hora lleva a la reserva completa.
  */
 export function LiveBooking({
@@ -70,7 +70,7 @@ export function LiveBooking({
   return (
     <div ref={rootRef} data-ui className="relative bg-surface text-ink rounded-2xl shadow-card p-5 sm:p-7 w-full">
       <div className="flex items-center gap-3">
-        <span className="grid place-items-center size-11 rounded-full bg-accent text-accent-ink font-bold" aria-hidden>
+        <span className="grid place-items-center size-11 rounded-xl bg-brand text-brand-ink font-bold" aria-hidden>
           {shopName.slice(0, 1)}
         </span>
         <div>
@@ -135,7 +135,7 @@ export function LiveBooking({
                 <Link
                   key={s}
                   href={`/b/${slug}?servicio=${serviceId}`}
-                  className="press h-11 grid place-items-center rounded-lg border border-accent-line text-accent-ink font-semibold text-[15px] tabular-nums hover:bg-accent"
+                  className="press h-11 grid place-items-center rounded-lg border border-line text-ink font-semibold text-[15px] tabular-nums hover:bg-brand hover:border-brand hover:text-brand-ink"
                 >
                   {fmtTime(s)}
                 </Link>

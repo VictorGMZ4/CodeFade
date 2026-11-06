@@ -9,8 +9,8 @@ export function cx(...classes: (string | false | null | undefined)[]) {
 }
 
 const buttonStyles = {
-  // Acción principal: fondo claro con texto oscuro, legible al sol
-  primary: "bg-accent text-accent-ink hover:shadow-soft hover:brightness-[0.98]",
+  // Acción principal: azul sólido con texto blanco
+  primary: "bg-brand text-brand-ink hover:shadow-soft hover:brightness-110",
   secondary: "bg-surface text-ink border border-line hover:border-accent-line",
   ghost: "text-ink hover:bg-raised",
   danger: "bg-danger-soft text-danger hover:brightness-[0.98]",
