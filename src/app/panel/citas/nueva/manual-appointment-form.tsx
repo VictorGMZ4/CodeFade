@@ -42,7 +42,7 @@ export function ManualAppointmentForm({ barbers, services, isOwner, day, today, 
     startTransition(() => action(data));
   }}>
     <fieldset disabled={pending} className="contents">
-      <Field label="Barbero" error={e.barberId}>
+      <Field label="Profesional" error={e.barberId}>
         {isOwner ? <select name="barberId" value={selection.barberId} onChange={(event) => change("barberId", event.target.value)} className={inputClass} aria-invalid={!!e.barberId}>
           {barbers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select> : <><input type="hidden" name="barberId" value={selection.barberId} /><input readOnly value={barbers[0].name} className={inputClass} /></>}

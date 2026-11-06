@@ -38,7 +38,7 @@ export default function AgendaPage(props: PageProps<"/panel">) {
 
 async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
   const { shop, isOwner, barberId } = await requireShop();
-  if (!isOwner && !barberId) return <Notice>Tu cuenta no está vinculada a ningún barbero. Pídeselo al dueño.</Notice>;
+  if (!isOwner && !barberId) return <Notice>Tu cuenta no está vinculada a ningún profesional. Pídeselo al dueño.</Notice>;
   const params = await searchParams;
   const tz = shop.timezone;
   const today = localDay(new Date(), tz);

@@ -70,7 +70,7 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[15px]">
           <dt className="text-muted">Servicio</dt>
           <dd>{a.service.name}</dd>
-          <dt className="text-muted">Barbero</dt>
+          <dt className="text-muted">Profesional</dt>
           <dd>{a.barber.name}</dd>
           <dt className="text-muted">Precio</dt>
           <dd className="tabular-nums">{formatPrice(a.priceCents, a.shop.currency)}</dd>

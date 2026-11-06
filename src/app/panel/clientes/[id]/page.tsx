@@ -33,7 +33,7 @@ async function CustomerContent({ params }: Props) {
   const figures = [
     ["Visitas atendidas", count("COMPLETED")], ["Total gastado", formatPrice(spent, shop.currency)],
     ["No vino", count("NO_SHOW")], ["Canceladas", count("CANCELLED")],
-    ["Barbero habitual", barber?.name ?? "—"],
+    ["Profesional habitual", barber?.name ?? "—"],
     ["Cliente desde", dates._min.startsAt ? formatDayLong(dates._min.startsAt, shop.timezone) : "—"],
   ];
   return <>

@@ -27,7 +27,8 @@ function actions(context, db = {}, file = "panel", extra = {}) {
       if (id === "@/lib/auth") return { requireShop: async () => context };
       if (id === "@/lib/db") return { db };
       if (id === "next/cache") return { revalidatePath() {} };
-      if (id === "@/lib/format") return { normalizePhone: () => null };
+      if (id === "@/lib/format") return { normalizePhone: () => null, slugify: (value) => value.toLowerCase().replace(/[^a-z0-9-]/g, "") };
+      if (id === "@/lib/business-types") return loadModule("src/lib/business-types.ts");
       if (id === "@/lib/booking-rules") return loadModule("src/lib/booking-rules.ts");
       if (id === "@/lib/time") return { hhmmToMinutes: (value) => { const [h, m] = value.split(":").map(Number); return h * 60 + m; } };
       return require(id);
@@ -38,6 +39,58 @@ function actions(context, db = {}, file = "panel", extra = {}) {
 
 const staff = { shop: { id: "shop" }, user: { id: "staff" }, role: "STAFF", isOwner: false, barberId: "mine" };
 const denied = "No tienes permiso para esta acción.";
+
+function formData(values) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(values)) form.set(key, value);
+  return form;
+}
+
+const settings = { name: "Mi negocio", slug: "mi-negocio", slotMinutes: "15", leadTimeMinutes: "60", bookingWindowDays: "15", reminderHours: "24" };
+const registration = { shopName: "Mi negocio", name: "Ana", email: "ana@codefade.test", password: "personal123", timezone: "America/Bogota", currency: "COP", countryCode: "57" };
+
+for (const businessType of ["INVALIDO", "", undefined]) {
+  test(`Registro rechaza tipo de negocio ${String(businessType)}`, async () => {
+    const api = authActions(null, { user: { findUnique: async () => ({ id: "existing" }) } });
+    const result = await api.signup(undefined, formData({ ...registration, ...(businessType === undefined ? {} : { businessType }) }));
+    assert.equal(result.errors.businessType?.[0], "Elige el tipo de negocio.");
+  });
+
+  test(`Ajustes rechaza tipo de negocio ${String(businessType)} sin guardar`, async () => {
+    let writes = 0;
+    const api = actions({ ...staff, isOwner: true, shop: { id: "shop", slug: "mi-negocio" } }, { shop: { update: async () => { writes++; } } });
+    const result = await api.saveSettings(undefined, formData({ ...settings, ...(businessType === undefined ? {} : { businessType }) }));
+    assert.equal(result.errors?.businessType?.[0], "Elige el tipo de negocio.");
+    assert.equal(writes, 0);
+  });
+}
+
+test("OWNER guarda cada tipo válido en su negocio", async () => {
+  for (const businessType of ["BARBERIA", "PELUQUERIA", "UNAS", "ESTETICA", "SPA", "OTRO"]) {
+    let updated;
+    const api = actions({ ...staff, isOwner: true, shop: { id: "shop", slug: "mi-negocio" } }, { shop: { update: async (query) => { updated = query; } } });
+    assert.equal((await api.saveSettings(undefined, formData({ ...settings, businessType }))).ok, true);
+    assert.equal(updated.where.id, "shop");
+    assert.equal(updated.data.businessType, businessType);
+  }
+});
+
+test("STAFF no puede cambiar el tipo de negocio", async () => {
+  let writes = 0;
+  const api = actions(staff, { shop: { update: async () => { writes++; } } });
+  assert.equal((await api.saveSettings(undefined, formData({ ...settings, businessType: "SPA" }))).error, denied);
+  assert.equal(writes, 0);
+});
+
+test("Registro guarda el tipo elegido al crear el negocio", async () => {
+  let created;
+  const api = authActions(null, {
+    user: { findUnique: async () => null, create: async (query) => { created = query.data; return { id: "new-user" }; } },
+    shop: { findUnique: async () => null },
+  });
+  await assert.rejects(api.signup(undefined, formData({ ...registration, businessType: "UNAS" })), /REDIRECT:\/panel\/servicios/);
+  assert.equal(created.memberships.create.shop.create.businessType, "UNAS");
+});
 
 test("STAFF no puede administrar servicios, ajustes ni crear barberos", async () => {
   const api = actions(staff);

@@ -34,10 +34,21 @@ model Membership {
   @@id([userId, shopId])
 }
 
+enum BusinessType {
+  BARBERIA
+  PELUQUERIA
+  UNAS
+  ESTETICA
+  SPA
+  OTRO
+}
+
 model Shop {
   id                String        @id @default(cuid())
   slug              String        @unique
   name              String
+  // Tipo de negocio; por ahora no modifica las reglas de reserva.
+  businessType      BusinessType  @default(OTRO)
   timezone          String        @default("America/Bogota")
   // ISO 4217; los precios se guardan en la unidad mínima (centavos)
   currency          String        @default("COP")

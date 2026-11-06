@@ -32,6 +32,7 @@ async function SettingsPageContent() {
         <SettingsForm
           shop={{
             name: shop.name,
+            businessType: shop.businessType,
             slug: shop.slug,
             phone: shop.phone ?? "",
             address: shop.address ?? "",

@@ -25,8 +25,8 @@ export async function createBarberAccount(_s: FormResult, formData: FormData): P
   const parsed = AccountSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
   const barber = await db.barber.findFirst({ where: { id, shopId: shop.id } });
-  if (!barber) return { error: "Barbero no encontrado." };
-  if (barber.userId) return { error: "Este barbero ya tiene una cuenta vinculada." };
+  if (!barber) return { error: "Profesional no encontrado." };
+  if (barber.userId) return { error: "Este profesional ya tiene una cuenta vinculada." };
   const { email, password } = parsed.data;
   if (await db.user.findUnique({ where: { email } })) return { errors: { email: ["Ya existe una cuenta con este correo."] } };
   const passwordHash = await bcrypt.hash(password, 12);
@@ -55,12 +55,12 @@ export async function linkOwnerAccount(_s: FormResult, formData: FormData): Prom
   if (!isOwner) return { error: "No tienes permiso para esta acción." };
   const id = String(formData.get("id") ?? "");
   // userId es único globalmente, también cuando el dueño administra varias barberías.
-  if (await db.barber.findUnique({ where: { userId: user.id } })) return { error: "Tu cuenta ya está vinculada a un barbero." };
+  if (await db.barber.findUnique({ where: { userId: user.id } })) return { error: "Tu cuenta ya está vinculada a un profesional." };
   try {
     const { count } = await db.barber.updateMany({ where: { id, shopId: shop.id, userId: null }, data: { userId: user.id } });
-    if (!count) return { error: "Barbero no encontrado o con acceso ya asignado." };
+    if (!count) return { error: "Profesional no encontrado o con acceso ya asignado." };
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return { error: "Tu cuenta ya está vinculada a un barbero." };
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return { error: "Tu cuenta ya está vinculada a un profesional." };
     throw error;
   }
   refreshAccess(id);
@@ -73,7 +73,7 @@ export async function removeBarberAccess(_s: FormResult, formData: FormData): Pr
   const id = String(formData.get("id") ?? "");
   const result = await db.$transaction(async (tx) => {
     const barber = await tx.barber.findFirst({ where: { id, shopId: shop.id } });
-    if (!barber) return { error: "Barbero no encontrado." };
+    if (!barber) return { error: "Profesional no encontrado." };
     if (!barber.userId) return { ok: true };
     const { count } = await tx.barber.updateMany({ where: { id, shopId: shop.id, userId: barber.userId }, data: { userId: null } });
     if (!count) return { error: "El acceso ha cambiado. Actualiza la página." };

@@ -30,7 +30,7 @@ async function TeamPageContent() {
 
   return (
     <>
-      <PageTitle title="Equipo" description="Barberos, horarios y ausencias." />
+      <PageTitle title="Equipo" description="Profesionales, horarios y ausencias." />
       <div className="grid gap-6 md:grid-cols-[1fr_340px] md:items-start">
         <Card className="divide-y divide-line">
           {barbers.map((b) => {
@@ -61,7 +61,7 @@ async function TeamPageContent() {
           })}
         </Card>
         <Card className="p-5">
-          <h2 className="font-medium mb-1">Añadir barbero</h2>
+          <h2 className="font-medium mb-1">Añadir profesional</h2>
           <p className="text-sm text-muted mb-4">Empieza con el mismo horario que el primero; luego puedes cambiarlo.</p>
           <NewBarberForm />
         </Card>

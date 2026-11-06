@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { signup } from "@/app/actions/auth";
+import { BUSINESS_TYPES, businessTypeLabel } from "@/lib/business-types";
 import { Button, Field, inputClass } from "@/components/ui";
 
 // País → zona horaria, moneda y prefijo. "Otro" deja usar la zona del navegador.
@@ -37,7 +38,7 @@ export function SignupForm({ defaultShopName }: { defaultShopName?: string }) {
 
   return (
     <form action={action} className="grid gap-4">
-      <Field label="Nombre de la barbería" error={e.shopName}>
+      <Field label="Nombre del negocio" error={e.shopName}>
         <input
           name="shopName"
           required
@@ -46,6 +47,12 @@ export function SignupForm({ defaultShopName }: { defaultShopName?: string }) {
           className={inputClass}
           aria-invalid={!!e.shopName}
         />
+      </Field>
+      <Field label="Tipo de negocio" error={e.businessType}>
+        <select name="businessType" required defaultValue="" className={inputClass} aria-invalid={!!e.businessType}>
+          <option value="" disabled>Elige una opción</option>
+          {BUSINESS_TYPES.map(({ value }) => <option key={value} value={value}>{businessTypeLabel(value)}</option>)}
+        </select>
       </Field>
       <Field label="Tu nombre" error={e.name}>
         <input name="name" required autoComplete="name" className={inputClass} aria-invalid={!!e.name} />
@@ -85,7 +92,7 @@ export function SignupForm({ defaultShopName }: { defaultShopName?: string }) {
         />
       </Field>
       <Button type="submit" disabled={pending} className="mt-2 h-12">
-        {pending ? "Creando…" : "Crear barbería"}
+        {pending ? "Creando…" : "Crear negocio"}
       </Button>
     </form>
   );

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { BUSINESS_TYPES } from "@/lib/business-types";
 import { BOOKING_RULES, type BookingRule } from "@/lib/booking-rules";
 import { normalizePhone, parsePrice, slugify } from "@/lib/format";
 import { hhmmToMinutes, localToUtc } from "@/lib/time";
@@ -85,7 +86,7 @@ export async function updateBarber(_s: FormResult, formData: FormData): Promise<
   const id = String(formData.get("id") ?? "");
   if (!isOwner && (!barberId || id !== barberId)) return { error: "No tienes permiso para esta acción." };
   const barber = await db.barber.findFirst({ where: { id, shopId: shop.id } });
-  if (!barber) return { error: "Barbero no encontrado." };
+  if (!barber) return { error: "Profesional no encontrado." };
 
   // STAFF solo puede modificar el horario; ignoramos los demás campos recibidos.
   let profile = {};
@@ -134,7 +135,7 @@ export async function addTimeOff(_s: FormResult, formData: FormData): Promise<Fo
   const barberId = String(formData.get("barberId") ?? "");
   if (!isOwner && (!ownBarberId || barberId !== ownBarberId)) return { error: "No tienes permiso para esta acción." };
   const barber = await db.barber.findFirst({ where: { id: barberId, shopId: shop.id } });
-  if (!barber) return { error: "Barbero no encontrado." };
+  if (!barber) return { error: "Profesional no encontrado." };
 
   const fromDay = String(formData.get("fromDay") ?? "");
   const toDay = String(formData.get("toDay") ?? "") || fromDay;
@@ -187,6 +188,7 @@ export async function setAppointmentStatus(id: string, status: (typeof STATUSES)
 // ── Ajustes ────────────────────────────────────────────────────────────────
 
 const SettingsSchema = z.object({
+  businessType: z.enum(BUSINESS_TYPES.map((type) => type.value), { error: "Elige el tipo de negocio." }),
   name: z.string().trim().min(2, { error: "Escribe un nombre." }).max(60),
   slug: z
     .string()
@@ -225,7 +227,7 @@ export async function saveSettings(_s: FormResult, formData: FormData): Promise<
   if (RESERVED_SLUGS.has(slug)) return { errors: { slug: ["Ese enlace no está disponible."] } };
   if (slug !== shop.slug) {
     const taken = await db.shop.findUnique({ where: { slug }, select: { id: true } });
-    if (taken) return { errors: { slug: ["Ese enlace ya lo usa otra barbería."] } };
+    if (taken) return { errors: { slug: ["Ese enlace ya lo usa otro negocio."] } };
   }
 
   await db.shop.update({

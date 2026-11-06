@@ -9,8 +9,8 @@ const text = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: { default: "CodeFade · Agenda para barberías", template: "%s · CodeFade" },
-  description: "Reservas online, agenda y recordatorios para barberías.",
+  title: { default: "AppTuServicio · Agenda online para negocios con citas", template: "%s · AppTuServicio" },
+  description: "Reservas online, agenda y recordatorios para negocios con citas.",
 };
 
 export const viewport: Viewport = {

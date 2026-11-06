@@ -7,11 +7,13 @@ import { db } from "@/lib/db";
 import { createSession, deleteSession } from "@/lib/session";
 import { slugify } from "@/lib/format";
 import { getUser } from "@/lib/auth";
+import { BUSINESS_TYPES } from "@/lib/business-types";
 
 export type AuthState = { errors?: Record<string, string[] | undefined>; message?: string } | undefined;
 
 const SignupSchema = z.object({
-  shopName: z.string().trim().min(2, { error: "Escribe el nombre de la barbería." }).max(60),
+  businessType: z.enum(BUSINESS_TYPES.map((type) => type.value), { error: "Elige el tipo de negocio." }),
+  shopName: z.string().trim().min(2, { error: "Escribe el nombre del negocio." }).max(60),
   name: z.string().trim().min(2, { error: "Escribe tu nombre." }).max(60),
   email: z.email({ error: "Correo no válido." }).trim().toLowerCase(),
   password: z.string().min(8, { error: "Mínimo 8 caracteres." }).max(100),
@@ -52,6 +54,7 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
           shop: {
             create: {
               name: data.shopName,
+              businessType: data.businessType,
               slug,
               timezone: data.timezone,
               currency: data.currency,
@@ -71,7 +74,7 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
 }
 
 async function uniqueSlug(name: string) {
-  const base = slugify(name) || "barberia";
+  const base = slugify(name) || "negocio";
   for (let i = 0; i < 20; i++) {
     const candidate = i === 0 ? base : `${base}-${i + 1}`;
     const taken = await db.shop.findUnique({ where: { slug: candidate }, select: { id: true } });

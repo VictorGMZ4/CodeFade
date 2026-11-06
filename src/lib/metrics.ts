@@ -63,7 +63,7 @@ type Summary = { reservations: number; online: number; manual: number; completed
 type Daily = { day: string; completed: number; booked: number; noShow: number };
 export async function getMetrics(context: Context, params: MetricsParams, period: ReturnType<typeof resolvePeriod>) {
   const barberId = metricsBarber(context, params.barbero);
-  if (barberId === "") throw new Error("Tu cuenta no está vinculada a ningún barbero. Pídeselo al dueño.");
+  if (barberId === "") throw new Error("Tu cuenta no está vinculada a ningún profesional. Pídeselo al dueño.");
   const scope = Prisma.sql`a."shopId" = ${context.shop.id} ${barberId === null ? Prisma.empty : Prisma.sql`AND a."barberId" = ${barberId}`}`;
   const selected = { shopId: context.shop.id, ...(barberId === null ? {} : { id: barberId }) };
   const barbers = await db.barber.findMany({ where: selected, select: { id: true, name: true, active: true, workingHours: true }, orderBy: { name: "asc" } });

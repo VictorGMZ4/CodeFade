@@ -12,7 +12,7 @@ export default function LoginPage() {
       <p className="text-[15px] text-muted mt-6">
         ¿Aún no tienes cuenta?{" "}
         <Link href="/registro" className="font-semibold text-accent-ink underline underline-offset-4">
-          Crea tu barbería
+          Crea tu negocio
         </Link>
       </p>
     </>

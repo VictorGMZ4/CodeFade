@@ -22,7 +22,7 @@ async function Content({ searchParams }: Props) {
   const lastDay = addDaysToDay(today, 60, shop.timezone);
   const day = typeof params.dia === "string" && isValidDay(params.dia) && params.dia >= today && params.dia <= lastDay ? params.dia : today;
   const back = <Link href={`/panel?dia=${day}`} className="press inline-flex min-h-11 items-center text-sm text-accent-ink mb-3">‹ Agenda</Link>;
-  if (!isOwner && !barberId) return <>{back}<Notice>Tu cuenta no está vinculada a ningún barbero. Pídeselo al dueño.</Notice></>;
+  if (!isOwner && !barberId) return <>{back}<Notice>Tu cuenta no está vinculada a ningún profesional. Pídeselo al dueño.</Notice></>;
   const barbers = await db.barber.findMany({
     where: { shopId: shop.id, active: true, ...(!isOwner ? { id: barberId! } : {}) },
     select: { id: true, name: true }, orderBy: { createdAt: "asc" },
@@ -33,7 +33,7 @@ async function Content({ searchParams }: Props) {
   return <div className="max-w-xl">
     {back}
     <PageTitle title="Nueva cita" />
-    {!barbers.length ? <Notice>No hay barberos activos disponibles.</Notice> : !services.length ? <Notice>No hay servicios activos disponibles.</Notice> :
+    {!barbers.length ? <Notice>No hay profesionales activos disponibles.</Notice> : !services.length ? <Notice>No hay servicios activos disponibles.</Notice> :
       <Card className="p-4 sm:p-6"><ManualAppointmentForm barbers={barbers} services={services} isOwner={isOwner} day={day} today={today} lastDay={lastDay} timezone={shop.timezone} /></Card>}
   </div>;
 }

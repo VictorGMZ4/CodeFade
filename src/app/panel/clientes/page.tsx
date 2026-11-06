@@ -16,7 +16,7 @@ export default function CustomersPage(props: Props) {
 
 async function CustomersContent({ searchParams }: Props) {
   const context = await requireShop();
-  if (!context.isOwner && !context.barberId) return <Notice>Tu cuenta no está vinculada a ningún barbero. Pídeselo al dueño.</Notice>;
+  if (!context.isOwner && !context.barberId) return <Notice>Tu cuenta no está vinculada a ningún profesional. Pídeselo al dueño.</Notice>;
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const requestedPage = typeof params.p === "string" ? Number(params.p) : 1;

@@ -57,7 +57,7 @@ export type BookingState = { error?: string; errors?: Record<string, string[] | 
 
 export async function book(slug: string, _state: BookingState, formData: FormData): Promise<BookingState> {
   const shop = await shopBySlug(slug);
-  if (!shop) return { error: "Esta barbería no existe." };
+  if (!shop) return { error: "Este negocio no existe." };
 
   const parsed = BookingSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -75,7 +75,7 @@ export async function book(slug: string, _state: BookingState, formData: FormDat
     where: { shopId: shop.id, status: "BOOKED", startsAt: { gt: new Date() }, customer: { phone } },
   });
   if (upcoming >= 3) {
-    return { error: "Ya tienes varias citas próximas. Escribe a la barbería si necesitas otra." };
+    return { error: "Ya tienes varias citas próximas. Escribe al negocio si necesitas otra." };
   }
 
   const result = await bookAppointment(shop, {

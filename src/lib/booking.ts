@@ -36,7 +36,7 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
     where: { shopId: shop.id, active: true, ...(input.barberId ? { id: input.barberId } : {}) },
     select: { id: true },
   });
-  if (barbers.length === 0) return { ok: false, error: "El barbero ya no está disponible." };
+  if (barbers.length === 0) return { ok: false, error: "El profesional ya no está disponible." };
 
   const day = localDay(input.start, shop.timezone);
   const slots = await getDaySlots(shop, day, service.durationMin, barbers.map((b) => b.id));

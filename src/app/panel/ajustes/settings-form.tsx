@@ -4,8 +4,11 @@ import { startTransition, useActionState, useState, type ChangeEvent } from "rea
 import { saveSettings } from "@/app/actions/panel";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
 import { RuleField } from "./rule-field";
+import type { BusinessType } from "@/generated/prisma/client";
+import { BUSINESS_TYPES, businessTypeLabel } from "@/lib/business-types";
 
 type Shop = {
+  businessType: BusinessType;
   name: string;
   slug: string;
   phone: string;
@@ -25,6 +28,7 @@ export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
   // guardado otra. Enviamos desde onSubmit para que no haya reinicio y los
   // campos sigan mostrando lo que el usuario acaba de guardar.
   const [values, setValues] = useState<Values>(() => ({
+    businessType: shop.businessType,
     name: shop.name,
     slug: shop.slug,
     phone: shop.phone,
@@ -57,8 +61,14 @@ export function SettingsForm({ shop, base }: { shop: Shop; base: string }) {
       className="grid gap-4 max-w-xl"
     >
       {state?.error && <Notice tone="error">{state.error}</Notice>}
-      <Field label="Nombre de la barbería" error={e.name}>
+      <Field label="Nombre del negocio" error={e.name}>
         <input {...bind("name")} required className={inputClass} />
+      </Field>
+      <Field label="Tipo de negocio" error={e.businessType}>
+        <select {...bind("businessType")} required className={inputClass} aria-invalid={!!e.businessType}>
+          <option value="" disabled>Elige una opción</option>
+          {BUSINESS_TYPES.map(({ value }) => <option key={value} value={value}>{businessTypeLabel(value)}</option>)}
+        </select>
       </Field>
       <Field label="Enlace" hint={`${base.replace(/^https?:\/\//, "")}/b/…`} error={e.slug}>
         <input {...bind("slug")} required autoCapitalize="none" className={inputClass} />

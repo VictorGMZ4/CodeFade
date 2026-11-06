@@ -34,7 +34,7 @@ async function ServicesPageContent({ searchParams }: PageProps<"/panel/servicios
       {bienvenida && services.length === 0 && (
         <div className="mb-6">
           <Notice>
-            ¡Listo! Ya creamos tu barbería con un horario de lunes a sábado. Empieza añadiendo tus servicios con su
+            ¡Listo! Ya creamos tu negocio con un horario de lunes a sábado. Empieza añadiendo tus servicios con su
             duración y precio.
           </Notice>
         </div>

@@ -12,7 +12,7 @@ import { AccessForm } from "./access-form";
 import { BarberForm } from "./barber-form";
 import { TimeOffForm } from "./time-off-form";
 
-export const metadata: Metadata = { title: "Barbero" };
+export const metadata: Metadata = { title: "Profesional" };
 
 export default function BarberPage(props: PageProps<"/panel/equipo/[id]">) {
   return (

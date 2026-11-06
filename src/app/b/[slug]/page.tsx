@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: PageProps<"/b/[slug]">): Prom
   if (!shop) return {};
   return {
     title: { absolute: `Reserva en ${shop.name}` },
-    description: `Elige servicio, barbero y hora en ${shop.name}.`,
+    description: `Elige servicio, profesional y hora en ${shop.name}.`,
   };
 }
 
@@ -133,7 +133,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
           />
         ) : (
           <p className="bg-surface rounded-2xl border border-line p-6">
-            Esta barbería todavía no tiene reservas online disponibles.
+            Este negocio todavía no tiene reservas online disponibles.
             {shop.phone && (
               <>
                 {" "}
@@ -149,7 +149,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
         <p className="text-[13px] text-muted text-center pb-10 -mt-24">
           Reservas con{" "}
           <Link href="/" className="underline underline-offset-2">
-            CodeFade
+            AppTuServicio
           </Link>
         </p>
       </div>

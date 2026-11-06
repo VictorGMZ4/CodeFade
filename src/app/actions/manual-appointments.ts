@@ -15,7 +15,7 @@ import type { FormResult } from "./panel";
 const options = { ignoreLeadTime: true, windowDays: 60 };
 const occupied = "Ese horario se acaba de ocupar. Elige otro.";
 const selectionSchema = z.object({
-  barberId: z.string().min(1, "Elige un barbero."),
+  barberId: z.string().min(1, "Elige un profesional."),
   serviceId: z.string().min(1, "Elige un servicio."),
   day: z.string().refine((day) => isValidDay(day) && new Date(day).toISOString().slice(0, 10) === day, "Elige un día válido."),
 });
@@ -36,7 +36,7 @@ async function selection(input: z.infer<typeof selectionSchema>) {
     return { errors: { day: ["Elige un día entre hoy y los próximos 60 días."] } };
   }
   const barber = await db.barber.findFirst({ where: { id: input.barberId, shopId: shop.id, active: true } });
-  if (!barber) return { errors: { barberId: ["El barbero ya no está disponible."] } };
+  if (!barber) return { errors: { barberId: ["El profesional ya no está disponible."] } };
   const service = await db.service.findFirst({ where: { id: input.serviceId, shopId: shop.id, active: true } });
   if (!service) return { errors: { serviceId: ["El servicio ya no está disponible."] } };
   const slots = await getDaySlots(shop, input.day, service.durationMin, [barber.id], new Date(), options);
@@ -45,7 +45,7 @@ async function selection(input: z.infer<typeof selectionSchema>) {
 
 export async function getManualSlots(input: { barberId: string; serviceId: string; day: string }): Promise<{ slots: Slot[]; error?: string }> {
   const parsed = selectionSchema.safeParse(input);
-  if (!parsed.success) return { slots: [], error: "Revisa el barbero, servicio y día." };
+  if (!parsed.success) return { slots: [], error: "Revisa el profesional, servicio y día." };
   const result = await selection(parsed.data);
   if (!result.context) return { slots: [], error: result.error ?? Object.values(result.errors ?? {}).flat()[0] };
   return { slots: result.slots };

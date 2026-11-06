@@ -18,7 +18,7 @@ export function AccessForm({ barberId, account, isSelf, canLinkSelf }: Props) {
   if (account) return <div className="grid gap-3">
     <p className="text-sm break-all">{account.email}</p>
     <form action={remove} onSubmit={(event) => {
-      if (!confirm(isSelf ? "¿Desvincular tu cuenta de este barbero?" : "¿Quitar a este barbero el acceso al panel?")) event.preventDefault();
+      if (!confirm(isSelf ? "¿Desvincular tu cuenta de este profesional?" : "¿Quitar a este profesional el acceso al panel?")) event.preventDefault();
     }} className="grid gap-3 justify-items-start">
       <input type="hidden" name="id" value={barberId} />
       {removed?.error && <Notice tone="error">{removed.error}</Notice>}
@@ -36,7 +36,7 @@ export function AccessForm({ barberId, account, isSelf, canLinkSelf }: Props) {
       <Field label="Contraseña temporal" hint="Mínimo 8 caracteres." error={created?.errors?.password}>
         <input name="password" type="password" required minLength={8} maxLength={100} autoComplete="new-password" className={inputClass} aria-invalid={!!created?.errors?.password} />
       </Field>
-      <p className="text-sm text-muted">Pásale estos datos al barbero; tendrá que cambiar la contraseña al entrar.</p>
+      <p className="text-sm text-muted">Pásale estos datos al profesional; tendrá que cambiar la contraseña al entrar.</p>
       <Button type="submit" disabled={creating || linking}>{creating ? "Creando…" : "Crear cuenta"}</Button>
     </form>
     {canLinkSelf && <form action={link} className="grid gap-3 justify-items-start border-t border-line pt-5">
