@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Suspense, type ReactNode } from "react";
-import { cx } from "@/components/ui";
+import { Suspense } from "react";
 import { getUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { formatPrice } from "@/lib/format";
-import { formatDuration } from "@/lib/time";
-import { LiveBooking } from "./_landing/live-booking";
 import { Reveal } from "./_landing/reveal";
-import { StartDialog } from "./_landing/start-dialog";
+import "./_landing/landing.css";
 
 const DEMO_SLUG = "demo";
-const SECTORS = ["Barberías", "Peluquerías", "Uñas", "Estética", "Spa"];
 
 const FAQ = [
   ["¿Tengo que instalar algo?", "No. AppTuServicio funciona en el navegador del móvil o del ordenador, para ti y para tus clientes."],
@@ -24,9 +18,14 @@ const FAQ = [
   ["¿En qué países funciona?", "En cualquiera. Al crear el negocio eliges el país y AppTuServicio usa su hora, su moneda y su prefijo telefónico."],
 ];
 
-// La portada es estática; solo la comprobación de sesión y la reserva de
-// ejemplo llegan en streaming. Si la base de datos falla, la portada se
-// muestra igual: sin redirección y con un enlace en lugar de la reserva.
+const BENEFITS = [
+  { color: "lp-green", icon: "✓", title: "Menos clientes que no llegan", text: "Recordatorio por WhatsApp con enlace para cancelar y liberar el hueco" },
+  { color: "lp-pink", icon: "⏱", title: "Nunca dos a la misma hora", text: "Cada hora se comprueba al confirmar; solo una reserva entra" },
+  { color: "lp-orange", icon: "●", title: "Tus datos, solo tuyos", text: "Contraseñas cifradas y una cuenta para cada profesional" },
+];
+
+// La portada es estática; solo la comprobación de sesión llega en streaming.
+// Si la base de datos falla, la portada se muestra igual, sin redirección.
 async function RedirectIfSignedIn() {
   let signedIn = false;
   try {
@@ -39,290 +38,184 @@ async function RedirectIfSignedIn() {
   return null;
 }
 
-async function DemoBooking() {
-  let shop;
-  try {
-    shop = await db.shop.findUnique({
-      where: { slug: DEMO_SLUG },
-      include: { services: { where: { active: true }, orderBy: { createdAt: "asc" }, take: 4 } },
-    });
-  } catch (error) {
-    console.error("[portada] no se pudo cargar la reserva de ejemplo", error);
-    return <BookingFallback />;
-  }
-  if (!shop || shop.services.length === 0) return <BookingFallback />;
-  return (
-    <LiveBooking
-      slug={shop.slug}
-      shopName={shop.name}
-      timezone={shop.timezone}
-      services={shop.services.map((s) => ({
-        id: s.id,
-        name: s.name,
-        duration: formatDuration(s.durationMin),
-        price: formatPrice(s.priceCents, shop.currency),
-      }))}
-    />
-  );
-}
-
-function BookingFallback() {
-  return (
-    <div className="bg-surface text-ink rounded-2xl shadow-card p-7 w-full">
-      <p className="font-bold text-[18px]">Reserva de ejemplo</p>
-      <p className="text-[15px] text-muted mt-1">No se puede mostrar aquí ahora mismo.</p>
-      <Link href={`/b/${DEMO_SLUG}`} className="inline-block mt-4 font-semibold text-accent-ink underline underline-offset-4">
-        Abrir la reserva de ejemplo
-      </Link>
-    </div>
-  );
-}
-
 export default function Home() {
-  const host = (process.env.APP_URL ?? "").replace(/^https?:\/\//, "") || "tu-dominio";
-
   return (
-    <div className="grain flex-1">
+    <div className="lp flex-1">
       <Suspense>
         <RedirectIfSignedIn />
       </Suspense>
       <Reveal />
 
-      <header className="pt-[env(safe-area-inset-top)] text-white">
-        <nav className="max-w-[1200px] mx-auto px-4 sm:px-6 h-16 flex items-center gap-7">
-          <Link href="/" className="text-[21px] font-bold tracking-[-0.02em] mr-auto">
-            AppTu<span className="font-medium opacity-75">Servicio</span>
+      <header className="lp-header">
+        <nav className="lp-wrap lp-nav" aria-label="Principal">
+          <Link href="/" className="lp-logo">
+            <span className="lp-mark" aria-hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round">
+                <rect x="3" y="5" width="18" height="16" rx="3" />
+                <path d="M8 3v4M16 3v4M3 10h18" />
+              </svg>
+            </span>
+            AppTuServicio
           </Link>
-          <div className="hidden md:flex gap-7 text-[15px] font-medium">
-            <a href="#agenda" className="press opacity-90 hover:opacity-100">Funciones</a>
-            <a href="#preguntas" className="press opacity-90 hover:opacity-100">Preguntas</a>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link href="/ingresar" className="press h-10 px-3 inline-flex items-center rounded-lg text-[15px] font-semibold hover:bg-white/15">
-              Ingresar
-            </Link>
-            <Link href="/registro" className={cx(whiteButton, "h-10 px-4 text-[15px] hidden sm:inline-flex")}>
-              Crear mi negocio
-            </Link>
-          </div>
+          <a href="#funciones" className="lp-link hidden md:inline">Funciones</a>
+          <a href="#confianza" className="lp-link hidden md:inline">Confianza</a>
+          <a href="#preguntas" className="lp-link hidden md:inline">Preguntas</a>
+          <Link href="/ingresar" className="lp-link text-white!">Ingresar</Link>
+          <Link href="/registro" className="lp-btn lp-btn-blue hidden! sm:inline-flex! h-11! px-[18px]! text-[15px]!">
+            Crear mi negocio
+          </Link>
         </nav>
       </header>
 
       <main>
-        {/* Portada: titular en blanco sobre el azul, reserva en vivo al lado */}
-        <section className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-8 pb-20 md:pt-14 md:pb-28 grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,470px)] lg:items-start">
-          <div className="text-white">
-            <h1 className="font-display text-[clamp(42px,5.4vw,74px)] leading-[1.02] max-w-[11ch]">
-              Tus clientes reservan solos.
+        <section id="funciones" className="lp-wrap lp-hero scroll-mt-4">
+          <div>
+            <span className="lp-pill"><span className="lp-dot" />Para negocios con citas</span>
+            <h1 className="lp-h1">
+              Tus clientes reservan <span className="lp-grad">solos.</span>
             </h1>
-            <p className="text-[19px] sm:text-[20px] leading-[1.5] mt-6 max-w-[34ch] opacity-95">
-              Agenda online para negocios con citas: eligen servicio, profesional y hora desde el móvil, y tú lo ves
-              todo ordenado.
+            <p className="lp-lead">
+              Barberías, peluquerías, uñas, estética y spa: eligen servicio, profesional y hora desde el móvil, y tú lo
+              ves todo ordenado.
             </p>
-            <ul className="flex flex-wrap gap-2 mt-7" aria-label="Para qué negocios">
-              {SECTORS.map((s) => (
-                <li key={s} className="rounded-full bg-white/16 px-3 py-1.5 text-[14px] font-medium">
-                  {s}
+            <div className="lp-actions">
+              <Link href="/registro" className="lp-btn lp-btn-blue">＋ Crear mi negocio gratis</Link>
+              <Link href={`/b/${DEMO_SLUG}`} className="lp-btn lp-btn-glass">Ver una reserva de ejemplo</Link>
+            </div>
+            <ul className="lp-checks">
+              {["Sin instalar nada", "Recordatorio por WhatsApp", "Sin dobles reservas"].map((c) => (
+                <li key={c}>
+                  <span className="lp-tick" aria-hidden>✓</span>
+                  {c}
                 </li>
               ))}
             </ul>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-9">
-              <Link href="/registro" className={cx(whiteButton, "inline-flex h-[52px] px-7 text-[17px]")}>
-                Crear mi negocio gratis
-              </Link>
-              <Link
-                href={`/b/${DEMO_SLUG}`}
-                className="press h-[52px] px-4 inline-flex items-center justify-center font-semibold text-[17px] underline underline-offset-4"
-              >
-                Ver una reserva de ejemplo
-              </Link>
-            </div>
           </div>
 
-          <div className="w-full max-w-[470px] lg:ml-auto">
-            <Suspense fallback={<BookingFallback />}>
-              <DemoBooking />
-            </Suspense>
+          <AppPreview />
+        </section>
+
+        <section id="confianza" className="lp-block scroll-mt-4">
+          <div data-reveal className="lp-wrap lp-sec">
+            <div>
+              <span className="lp-pill lp-pill-ok"><span className="lp-dot" />Confianza</span>
+              <h2 className="lp-h2">
+                Menos llamadas, <span className="lp-grad">menos ausencias.</span>
+              </h2>
+              <p className="lp-text">
+                La agenda se cuida sola: comprueba cada hora antes de confirmarla y le recuerda la cita a tu cliente.
+              </p>
+            </div>
+            <ul className="lp-frost">
+              {BENEFITS.map((b) => (
+                <li key={b.title} className="lp-row">
+                  <span className={`lp-ico ${b.color}`} aria-hidden>
+                    <span>{b.icon}</span>
+                  </span>
+                  <span>
+                    <span className="lp-row-title">{b.title}</span>
+                    <span className="lp-row-text">{b.text}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
-        <Showcase />
-        <Questions />
-        <Closing host={host} />
-      </main>
-      <Footer />
-    </div>
-  );
-}
-
-// Botón blanco con texto azul, para usar encima del degradado
-const whiteButton =
-  "press items-center justify-center rounded-lg bg-white text-[#1650b0] font-semibold hover:shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
-
-// ── Fragmentos del producto: la agenda y las métricas ─────────────────────
-
-function Showcase() {
-  return (
-    <section id="agenda" className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-6 md:pt-16 grid gap-20 md:gap-28 scroll-mt-6">
-      <Row
-        title="La agenda del día, sin chats."
-        text="Cada cita llega con el servicio, el profesional y el contacto del cliente. Marcas si vino y le escribes con un toque."
-      >
-        <p className="font-semibold">Hoy · Miércoles 11</p>
-        <p className="text-[14px] text-muted">3 citas · $ 78.000 previstos</p>
-        <ul className="mt-3 grid gap-2">
-          {[
-            ["09:00", "Laura Gómez", "Corte y peinado · Ana", "Reservada"],
-            ["10:30", "Marta Ruiz", "Manicure · Sofía", "Reservada"],
-            ["14:00", "Julián Pérez", "Barba · Andrés", "Manual"],
-          ].map(([t, n, s, tag]) => (
-            <li key={t} className="flex items-center gap-4 rounded-xl bg-raised px-4 py-3">
-              <span className="font-bold tabular-nums w-12">{t}</span>
-              <span className="min-w-0">
-                <span className="block font-semibold truncate">{n}</span>
-                <span className="block text-[14px] text-muted truncate">{s}</span>
-              </span>
-              <span className="ml-auto shrink-0 rounded-full bg-accent text-accent-ink px-2.5 py-0.5 text-[12px] font-semibold">
-                {tag}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Row>
-      <Row
-        title="Sabes cómo va tu negocio."
-        text="Reservas, ingresos y ocupación por semana o por mes, comparados con el periodo anterior."
-      >
-        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          {[
-            ["Reservas", "86", "12%"],
-            ["Ingresos", "$ 2,9 M", "8%"],
-            ["Ocupación", "74%", "5%"],
-          ].map(([k, v, up]) => (
-            <div key={k} className="rounded-xl bg-raised p-3.5 min-w-0">
-              <dt className="text-[13px] text-muted">{k}</dt>
-              <dd className="text-[26px] font-bold tracking-[-0.02em] tabular-nums">{v}</dd>
-              <dd className="text-[13px] font-semibold text-ok">▲ {up}</dd>
+        <section id="preguntas" className="lp-block scroll-mt-4">
+          <div className="lp-wrap lp-faq">
+            <div className="text-center">
+              <span className="lp-pill"><span className="lp-dot" />Preguntas</span>
+              <h2 className="lp-h2">Preguntas frecuentes</h2>
             </div>
-          ))}
-        </dl>
-        <div aria-hidden className="mt-5 h-28 flex items-end gap-2 border-b border-line px-1">
-          {[40, 62, 55, 80, 72, 95, 30, 58, 66, 88, 70, 92].map((h, i) => (
-            <span key={i} className="flex-1 max-w-6 rounded-t bg-brand" style={{ height: `${h}%` }} />
-          ))}
-        </div>
-      </Row>
-    </section>
-  );
-}
+            <div className="lp-frost mt-7">
+              {FAQ.map(([q, a]) => (
+                <details key={q} className="lp-row">
+                  <summary className="press">
+                    {q}
+                    <span aria-hidden>+</span>
+                  </summary>
+                  <p className="lp-answer">{a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
 
-function Row({ title, text, children }: { title: string; text: string; children: ReactNode }) {
-  return (
-    <div data-reveal className="grid gap-7 md:grid-cols-[5fr_7fr] md:gap-14 md:items-center">
-      <div>
-        <h2 className="font-display text-[clamp(30px,3.4vw,44px)] leading-[1.08] max-w-[14ch]">{title}</h2>
-        <p className="text-[18px] mt-4 max-w-[38ch] opacity-80">{text}</p>
-      </div>
-      <div data-ui className="bg-surface text-ink rounded-2xl shadow-card p-5 sm:p-6 min-w-0">
-        {children}
-      </div>
+        <section className="lp-wrap pb-16">
+          <div data-reveal className="lp-cta">
+            <div>
+              <h2 className="lp-h2 mt-0!">
+                Abre tu agenda <span className="lp-grad">hoy.</span>
+              </h2>
+              <p className="lp-text text-[19px]!">
+                Creas la cuenta, añades tus servicios y compartes el enlace. Desde ese momento tus clientes pueden reservar.
+              </p>
+            </div>
+            <Link href="/registro" className="lp-btn lp-btn-blue">Crear mi negocio gratis</Link>
+          </div>
+        </section>
+      </main>
+
+      <footer className="lp-wrap">
+        <div className="lp-footer">
+          <span>AppTuServicio · Agenda online para negocios con citas</span>
+          <span className="flex gap-4">
+            <a href="#funciones">Funciones</a>
+            <a href="#preguntas">Preguntas</a>
+            <Link href="/ingresar">Ingresar</Link>
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }
 
-// ── Preguntas ─────────────────────────────────────────────────────────────
-
-function Questions() {
+// Vista de la app con datos de ejemplo (no consulta la base de datos).
+function AppPreview() {
   return (
-    <section className="max-w-[820px] mx-auto px-4 sm:px-6 pt-20 md:pt-28">
-      <div id="preguntas" data-reveal className="bg-surface text-ink rounded-2xl shadow-card scroll-mt-6">
-        <div className="px-5 sm:px-7 pt-7 pb-3">
-          <h2 className="font-display text-[clamp(28px,3vw,38px)]">Preguntas frecuentes</h2>
-          <p className="text-muted mt-2">Lo que suelen preguntar los negocios antes de empezar.</p>
-        </div>
-        <div className="divide-y divide-line">
-          {FAQ.map(([q, a]) => (
-            <details key={q} className="group px-5 sm:px-7">
-              <summary className="press flex items-center justify-between gap-4 py-5 cursor-pointer list-none font-semibold text-[17px] [&::-webkit-details-marker]:hidden">
-                {q}
-                <span aria-hidden className="text-muted text-[22px] leading-none transition-transform duration-200 group-open:rotate-45">
-                  +
-                </span>
-              </summary>
-              <p className="pb-5 -mt-1 text-muted">{a}</p>
-            </details>
-          ))}
-        </div>
+    <div className="lp-phone lp-frost" role="img" aria-label="Ejemplo de la agenda de AppTuServicio en el móvil">
+      <div className="lp-chip" aria-hidden>
+        <span className="lp-ico lp-green">↗</span>
+        <span>
+          <b>+12%</b>
+          <small>reservas este mes</small>
+        </span>
       </div>
-    </section>
-  );
-}
-
-// ── Cierre: el primer paso ya abierto ─────────────────────────────────────
-
-function Closing({ host }: { host: string }) {
-  return (
-    <section className="px-4 sm:px-6 pt-20 md:pt-28 pb-16">
-      <div className="max-w-[1200px] mx-auto rounded-3xl border border-white/35 bg-white/12 backdrop-blur-md text-white px-6 sm:px-12 py-12 md:py-16 grid gap-10 grid-cols-[minmax(0,1fr)] md:grid-cols-2 md:items-center">
-        <div>
-          <h2 className="font-display text-[clamp(36px,4.6vw,60px)] leading-[1.02]">Abre tu agenda hoy.</h2>
-          <p className="mt-5 text-[18px] max-w-[36ch] opacity-95">
-            Creas la cuenta, añades tus servicios y compartes el enlace. Desde ese momento tus clientes pueden reservar.
-          </p>
+      <div className="lp-screen" aria-hidden>
+        <div className="lp-bar">
+          <h2>Agenda</h2>
+          <span className="lp-bell">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.4A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.6L18 12.6V9a6 6 0 0 0-6-6Zm-2 15a2 2 0 0 0 4 0Z" /></svg>
+          </span>
         </div>
-        <div className="flex md:justify-end">
-          <StartDialog host={host} />
+        <div className="lp-banner">
+          <p>Hoy · Viernes 6</p>
+          <p className="lp-big">$ 128.000 previstos</p>
+          <p>5 citas en Estudio Lumen</p>
+          <span className="lp-banner-btn">Ver la agenda</span>
         </div>
-      </div>
-    </section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="text-white">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-4 pb-[max(2.5rem,env(safe-area-inset-bottom))] grid gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div>
-          <p className="text-[21px] font-bold tracking-[-0.02em]">
-            AppTu<span className="font-medium opacity-75">Servicio</span>
-          </p>
-          <p className="text-[15px] mt-2 max-w-[32ch] opacity-85">Agenda y reservas online para negocios con citas.</p>
-        </div>
-        <FooterLinks
-          title="Producto"
-          links={[
-            ["#agenda", "Funciones"],
-            ["#preguntas", "Preguntas"],
-            [`/b/${DEMO_SLUG}`, "Reserva de ejemplo"],
-          ]}
-        />
-        <FooterLinks
-          title="Cuenta"
-          links={[
-            ["/registro", "Crear cuenta"],
-            ["/ingresar", "Ingresar"],
-          ]}
-        />
-      </div>
-    </footer>
-  );
-}
-
-function FooterLinks({ title, links }: { title: string; links: [string, string][] }) {
-  return (
-    <div>
-      <p className="text-[13px] font-semibold opacity-75">{title}</p>
-      <ul className="mt-3 grid gap-2 text-[15px] font-semibold">
-        {links.map(([href, label]) => (
-          <li key={href}>
-            {href.startsWith("#") ? (
-              <a href={href} className="press hover:underline underline-offset-4">{label}</a>
-            ) : (
-              <Link href={href} className="press hover:underline underline-offset-4">{label}</Link>
-            )}
-          </li>
+        <p className="lp-label">Próximas <span>Ver todas</span></p>
+        {[
+          ["10:00", "Laura Gómez", "Corte y peinado · Ana", "Reservada", false],
+          ["11:30", "Marta Ruiz", "Manicure · Sofía", "Atendida", true],
+        ].map(([t, n, s, st, ok]) => (
+          <div key={String(t)} className="lp-appt">
+            <span className="lp-appt-time">{t}</span>
+            <span className="min-w-0">
+              <span className="lp-appt-name block truncate">{n}</span>
+              <span className="lp-appt-info block truncate">{s}</span>
+            </span>
+            <span className={ok ? "lp-status lp-status-ok" : "lp-status"}>{st}</span>
+          </div>
         ))}
-      </ul>
+        <div className="lp-tabs">
+          <span className="lp-on">Agenda</span>
+          <span>Clientes</span>
+          <span>Métricas</span>
+          <span>Equipo</span>
+        </div>
+      </div>
     </div>
   );
 }
