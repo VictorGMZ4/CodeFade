@@ -102,7 +102,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
                   aria-current={selected ? "date" : undefined}
                   className={cx(
                     "press flex flex-col items-center w-12 py-2 rounded-xl border text-sm",
-                    selected ? "bg-accent text-accent-ink border-accent-line font-semibold" : "bg-surface border-line hover:border-accent-line",
+                    selected ? "bg-brand text-brand-ink border-brand font-semibold" : "bg-surface border-line hover:border-accent-line",
                     d < today && !selected && "opacity-50",
                   )}
                 >
@@ -126,7 +126,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
                 href={href(day, b.id)}
                 className={cx(
                   "press rounded-full px-3.5 py-1.5 text-sm border",
-                  barberFilter === b.id ? "bg-accent text-accent-ink border-accent-line font-semibold" : "bg-surface border-line hover:border-accent-line",
+                  barberFilter === b.id ? "bg-brand text-brand-ink border-brand font-semibold" : "bg-surface border-line hover:border-accent-line",
                 )}
               >
                 {b.name}

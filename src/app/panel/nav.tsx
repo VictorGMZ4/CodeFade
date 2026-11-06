@@ -45,7 +45,7 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
               aria-current={isActive(href) ? "page" : undefined}
               className={cx(
                 "press block rounded-lg px-3 py-1.5 text-sm",
-                isActive(href) ? "bg-accent text-accent-ink font-semibold" : "text-muted hover:text-ink",
+                isActive(href) ? "bg-brand text-brand-ink font-semibold" : "text-muted hover:text-ink hover:bg-raised",
               )}
             >
               {label}
@@ -64,11 +64,13 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
             href={href}
             aria-current={isActive(href) ? "page" : undefined}
             className={cx(
-              "press flex flex-col items-center gap-1 pt-2.5 pb-2 text-[11px] font-medium",
-              isActive(href) ? "text-accent-ink font-bold" : "text-muted",
+              "press flex flex-col items-center gap-0.5 pt-1.5 pb-1.5 text-[11px] font-medium",
+              isActive(href) ? "text-ink font-bold" : "text-muted",
             )}
           >
-            <Icon />
+            <span className={cx("grid place-items-center h-8 w-14 rounded-full", isActive(href) && "bg-brand text-brand-ink")}>
+              <Icon />
+            </span>
             {label}
           </Link>
         </li>
@@ -98,12 +100,14 @@ function MoreMenu({ active, pathname }: { active: boolean; pathname: string | nu
   return <div ref={root} onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }}>
-    <button ref={trigger} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className={cx("press w-full flex flex-col items-center gap-1 pt-2.5 pb-2 text-[11px] font-medium", active ? "text-accent-ink font-bold" : "text-muted")}>
-      <svg {...iconProps}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
+    <button ref={trigger} type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className={cx("press w-full flex flex-col items-center gap-0.5 pt-1.5 pb-1.5 text-[11px] font-medium", active ? "text-ink font-bold" : "text-muted")}>
+      <span className={cx("grid place-items-center h-8 w-14 rounded-full", active && "bg-brand text-brand-ink")}>
+        <svg {...iconProps}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg>
+      </span>
       Más
     </button>
     {open && <ul id={id} aria-label="Más opciones" className="absolute bottom-full right-2 mb-2 w-44 rounded-xl border border-line bg-surface shadow-card p-1">
-      {LINKS.slice(4).map(({ href, label }) => <li key={href}><Link href={href} onClick={() => setOpen(false)} aria-current={pathname?.startsWith(href) ? "page" : undefined} className={cx("block rounded-lg px-4 py-3 text-sm", pathname?.startsWith(href) ? "bg-accent font-semibold text-accent-ink" : "hover:bg-raised")}>{label}</Link></li>)}
+      {LINKS.slice(4).map(({ href, label }) => <li key={href}><Link href={href} onClick={() => setOpen(false)} aria-current={pathname?.startsWith(href) ? "page" : undefined} className={cx("block rounded-lg px-4 py-3 text-sm", pathname?.startsWith(href) ? "bg-brand font-semibold text-brand-ink" : "hover:bg-raised")}>{label}</Link></li>)}
     </ul>}
   </div>;
 }

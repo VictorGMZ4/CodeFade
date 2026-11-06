@@ -174,7 +174,7 @@ export function BookingFlow({
               >
                 <span
                   aria-hidden
-                  className="grid place-items-center size-9 shrink-0 rounded-full bg-raised text-[14px] font-bold"
+                  className="grid place-items-center size-9 shrink-0 rounded-full bg-raised text-ink text-[14px] font-bold"
                 >
                   {b.id ? b.name.slice(0, 1).toUpperCase() : "★"}
                 </span>
@@ -230,8 +230,8 @@ export function BookingFlow({
                               className={cx(
                                 "press h-12 rounded-lg border text-[16px] font-semibold tabular-nums",
                                 start === s
-                                  ? "bg-accent border-accent-line text-accent-ink"
-                                  : "border-accent-line text-accent-ink hover:bg-accent-soft",
+                                  ? "bg-brand border-brand text-brand-ink"
+                                  : "border-line text-ink hover:border-accent-line hover:bg-accent-soft",
                               )}
                             >
                               {time(s)}
@@ -388,7 +388,7 @@ function MonthCalendar({
               aria-label={label(d)}
               className={cx(
                 "press aspect-square max-h-12 w-full mx-auto rounded-full grid place-items-center text-[16px] font-bold tabular-nums",
-                isSelected ? "bg-accent text-accent-ink ring-2 ring-accent-line" : "bg-accent-soft text-accent-ink hover:bg-accent",
+                isSelected ? "bg-brand text-brand-ink" : "bg-accent-soft text-accent-ink hover:bg-accent",
               )}
             >
               {i + 1}
@@ -432,7 +432,7 @@ function Choice({
         className,
         "press flex items-center gap-3 rounded-xl border px-4 py-3.5 cursor-pointer min-w-0",
         "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-line",
-        checked ? "bg-accent border-accent-line text-accent-ink" : "border-line hover:border-accent-line",
+        checked ? "bg-brand border-brand text-brand-ink [&_.text-muted]:text-brand-ink/85" : "bg-surface border-line hover:border-accent-line",
       )}
     >
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />

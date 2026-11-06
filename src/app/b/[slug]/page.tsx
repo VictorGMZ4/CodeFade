@@ -82,7 +82,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
     <main className="flex-1 w-full max-w-[1100px] mx-auto px-3 sm:px-6 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-10 lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-8 lg:items-start">
       <header className="bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7 lg:sticky lg:top-6 mb-4 lg:mb-0">
         <div className="flex items-center gap-3">
-          <span aria-hidden className="grid place-items-center size-12 shrink-0 rounded-full bg-accent text-accent-ink text-[20px] font-bold">
+          <span aria-hidden className="grid place-items-center size-12 shrink-0 rounded-xl bg-brand text-brand-ink text-[20px] font-bold">
             {shop.name.slice(0, 1)}
           </span>
           <h1 className="font-display text-[24px] sm:text-[28px] leading-tight">{shop.name}</h1>
