@@ -1,5 +1,8 @@
 "use server";
 
+import { createHash, randomBytes } from "node:crypto";
+import { clientIp, isLimited, recordHit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { sendPasswordReset } from "@/lib/notify";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import * as z from "zod";
@@ -14,6 +17,7 @@ export type AuthState = { errors?: Record<string, string[] | undefined>; message
 const SignupSchema = z.object({
   businessType: z.enum(BUSINESS_TYPES.map((type) => type.value), { error: "Elige el tipo de negocio." }),
   shopName: z.string().trim().min(2, { error: "Escribe el nombre del negocio." }).max(60),
+  privacy: z.literal("on", { error: "Acepta el aviso de privacidad para crear la cuenta." }),
   name: z.string().trim().min(2, { error: "Escribe tu nombre." }).max(60),
   email: z.email({ error: "Correo no válido." }).trim().toLowerCase(),
   password: z.string().min(8, { error: "Mínimo 8 caracteres." }).max(100),
@@ -37,6 +41,10 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
     return { errors: { timezone: ["Zona horaria no válida."] } };
   }
 
+  const key = `signup:ip:${await clientIp()}`;
+  if (await isLimited(key, 5, 60 * 60 * 1000)) return { message: RATE_LIMIT_MESSAGE };
+  await recordHit(key);
+
   const exists = await db.user.findUnique({ where: { email: data.email } });
   if (exists) return { errors: { email: ["Ya existe una cuenta con este correo."] } };
 
@@ -48,6 +56,7 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
       email: data.email,
       name: data.name,
       passwordHash,
+      privacyAcceptedAt: new Date(),
       memberships: {
         create: {
           role: "OWNER",
@@ -95,9 +104,17 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
   const parsed = LoginSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
 
+  const emailKey = `login:email:${parsed.data.email}`;
+  const ipKey = `login:ip:${await clientIp()}`;
+  const limits = await Promise.all([isLimited(emailKey, 5, 15 * 60 * 1000), isLimited(ipKey, 20, 15 * 60 * 1000)]);
+  if (limits.some(Boolean)) return { message: RATE_LIMIT_MESSAGE };
+
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   const valid = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
-  if (!user || !valid) return { message: "Correo o contraseña incorrectos." };
+  if (!user || !valid) {
+    await Promise.all([recordHit(emailKey), recordHit(ipKey)]);
+    return { message: "Correo o contraseña incorrectos." };
+  }
 
   await createSession(user.id);
   redirect(user.mustChangePassword ? "/cambiar-contrasena" : "/panel");
@@ -125,4 +142,60 @@ export async function changePassword(_state: AuthState, formData: FormData): Pro
 export async function logout() {
   await deleteSession();
   redirect("/ingresar");
+}
+
+const RESET_SENT = "Si el correo está registrado, te enviamos un enlace para crear una contraseña nueva. Revisa también la carpeta de spam.";
+const RESET_INVALID = "Este enlace ya no es válido. Pide uno nuevo.";
+
+export async function requestPasswordReset(_state: AuthState, formData: FormData): Promise<AuthState> {
+  const parsed = z.string().trim().toLowerCase().pipe(z.email()).safeParse(formData.get("email"));
+  if (!parsed.success) return { message: RESET_SENT };
+  const emailKey = `reset:email:${parsed.data}`;
+  const ipKey = `reset:ip:${await clientIp()}`;
+  const limits = await Promise.all([isLimited(emailKey, 3, 60 * 60 * 1000), isLimited(ipKey, 10, 60 * 60 * 1000)]);
+  // Tampoco se revela el estado del límite de un correo.
+  if (limits.some(Boolean)) return { message: RESET_SENT };
+  await Promise.all([recordHit(emailKey), recordHit(ipKey)]);
+  const user = await db.user.findUnique({ where: { email: parsed.data } });
+  if (user) {
+    const token = randomBytes(32).toString("base64url");
+    await db.$transaction(async (tx) => {
+      // Serializa solicitudes simultáneas para invalidar también el enlace recién creado.
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${user.id} FOR UPDATE`;
+      const now = new Date();
+      await tx.passwordResetToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: now } });
+      await tx.passwordResetToken.create({ data: {
+        userId: user.id, tokenHash: createHash("sha256").update(token).digest("hex"),
+        expiresAt: new Date(now.getTime() + 60 * 60 * 1000),
+      } });
+    });
+    try {
+      const appUrl = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+      await sendPasswordReset({ to: user.email, name: user.name, url: `${appUrl}/restablecer/${token}` });
+    } catch {
+      // Un fallo del proveedor no revela la cuenta ni registra el token.
+      console.error("No se pudo enviar el correo de recuperación.");
+    }
+  }
+  return { message: RESET_SENT };
+}
+
+export async function resetPassword(token: string, _state: AuthState, formData: FormData): Promise<AuthState> {
+  const parsed = PasswordSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const reset = await db.passwordResetToken.findUnique({ where: { tokenHash } });
+  if (!reset || reset.usedAt || reset.expiresAt <= new Date()) return { message: RESET_INVALID };
+  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const saved = await db.$transaction(async (tx) => {
+    // Recomprueba la validez al escribir, incluso tras otro envío durante bcrypt.
+    const claimed = await tx.passwordResetToken.updateMany({
+      where: { id: reset.id, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() },
+    });
+    if (claimed.count !== 1) return false;
+    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash, mustChangePassword: false } });
+    return true;
+  });
+  if (!saved) return { message: RESET_INVALID };
+  redirect("/ingresar?restablecida=1");
 }

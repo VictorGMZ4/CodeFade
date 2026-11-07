@@ -146,3 +146,20 @@ function escapeHtml(text: string) {
 export function whatsappLink(phone: string, text: string) {
   return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 }
+
+export async function sendPasswordReset({ to, name, url }: { to: string; name: string; url: string }): Promise<void> {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    console.info(`[recuperación:email] ${to}: Hola ${name}, crea una contraseña nueva: ${url}`);
+    return;
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM, to, subject: "Crea una contraseña nueva · AppTuServicio",
+      html: `<div style="font-family:system-ui,sans-serif;max-width:480px;margin:auto"><p>Hola ${escapeHtml(name)},</p><p><a href="${escapeHtml(url)}">Crear una contraseña nueva</a></p><p>Este enlace caduca en una hora y solo se puede usar una vez. Si no lo solicitaste, ignora este correo.</p></div>`,
+    }),
+  });
+  if (!res.ok) throw new Error(`Resend rechazó el correo de recuperación (${res.status}).`);
+}

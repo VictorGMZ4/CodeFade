@@ -298,6 +298,17 @@ export function BookingFlow({
             <Field label="¿Algo que debamos saber? (opcional)">
               <textarea name="notes" rows={2} maxLength={200} className={`${inputClass} h-auto py-2.5 resize-none`} />
             </Field>
+            <label className="flex items-start gap-3 text-[15px] cursor-pointer">
+              <input type="checkbox" name="privacy" required className="mt-1 size-5 shrink-0 accent-[var(--brand)]" aria-invalid={!!state?.errors?.privacy} />
+              <span>
+                Acepto el{" "}
+                <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink underline underline-offset-4">
+                  aviso de privacidad
+                </a>{" "}
+                y que el negocio use mis datos para gestionar la cita.
+                {state?.errors?.privacy && <span className="block text-[14px] text-danger mt-1">{state.errors.privacy[0]}</span>}
+              </span>
+            </label>
           </form>
         </Step>
       )}

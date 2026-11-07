@@ -1,5 +1,6 @@
 "use server";
 
+import { clientIp, isLimited, recordHit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 import { bookableDays, getDaySlots, getSlots } from "@/lib/availability";
@@ -49,6 +50,7 @@ const BookingSchema = z.object({
   phone: z.string().trim().min(6, { error: "Escribe tu número." }).max(25),
   email: z.union([z.literal(""), z.email({ error: "Correo no válido." })]).optional(),
   notes: z.string().trim().max(200).optional(),
+  privacy: z.literal("on", { error: "Acepta el aviso de privacidad para reservar." }),
   // Campo trampa: los humanos no lo ven, los bots lo rellenan.
   website: z.string().max(0).optional(),
 });
@@ -70,6 +72,10 @@ export async function book(slug: string, _state: BookingState, formData: FormDat
   const phone = normalizePhone(data.phone, shop.countryCode);
   if (!phone) return { errors: { phone: ["Número no válido."] } };
 
+  const key = `book:ip:${await clientIp()}`;
+  if (await isLimited(key, 10, 60 * 60 * 1000)) return { error: RATE_LIMIT_MESSAGE };
+  await recordHit(key);
+
   // Evita que un mismo número acapare la agenda.
   const upcoming = await db.appointment.count({
     where: { shopId: shop.id, status: "BOOKED", startsAt: { gt: new Date() }, customer: { phone } },
@@ -88,6 +94,9 @@ export async function book(slug: string, _state: BookingState, formData: FormDat
     notes: data.notes || null,
   });
   if (!result.ok) return { error: result.error };
+
+  // Prueba de la autorización (Ley 1581): fecha en que aceptó el aviso.
+  await db.customer.updateMany({ where: { shopId: shop.id, phone }, data: { privacyAcceptedAt: new Date() } });
 
   redirect(`/cita/${result.manageToken}?nueva=1`);
 }

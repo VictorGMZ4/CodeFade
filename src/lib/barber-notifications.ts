@@ -22,7 +22,7 @@ export async function notifyBarber(appointment: { id: string; shopId: string; ba
           where: { id: appointment.id },
           include: { barber: true, customer: true, service: true, shop: true },
         });
-        if (!data?.barber.phone) return;
+        if (!data?.barber.phone || data.shop.isDemo) return;
         await sendBarberNotice({
           type, barberName: data.barber.name, barberPhone: data.barber.phone,
           customerName: data.customer.name, serviceName: data.service.name,

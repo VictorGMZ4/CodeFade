@@ -25,6 +25,8 @@ export async function GET(request: Request) {
       status: "BOOKED",
       source: "ONLINE",
       reminderSentAt: null,
+      // El negocio de ejemplo no envía recordatorios reales.
+      shop: { isDemo: false },
       startsAt: { gt: now, lte: new Date(now.getTime() + MAX_REMINDER_HOURS * 3600_000) },
     },
     include: { shop: true, customer: true, service: true, barber: true },

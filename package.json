@@ -12,6 +12,8 @@
     "db:start": "prisma dev -d -n barberia",
     "db:migrate": "prisma migrate dev && prisma generate",
     "db:seed": "prisma db seed",
+    "db:seed-demo": "tsx prisma/seed-demo.ts",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "postinstall": "prisma generate"
   },
   "dependencies": {

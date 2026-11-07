@@ -47,7 +47,7 @@ function formData(values) {
 }
 
 const settings = { name: "Mi negocio", slug: "mi-negocio", slotMinutes: "15", leadTimeMinutes: "60", bookingWindowDays: "15", reminderHours: "24" };
-const registration = { shopName: "Mi negocio", name: "Ana", email: "ana@codefade.test", password: "personal123", timezone: "America/Bogota", currency: "COP", countryCode: "57" };
+const registration = { shopName: "Mi negocio", name: "Ana", email: "ana@codefade.test", password: "personal123", timezone: "America/Bogota", currency: "COP", countryCode: "57", privacy: "on" };
 
 for (const businessType of ["INVALIDO", "", undefined]) {
   test(`Registro rechaza tipo de negocio ${String(businessType)}`, async () => {
@@ -209,6 +209,8 @@ test("Quitar acceso solo elimina la membresía STAFF de la barbería actual", as
 function authActions(user, db = {}) {
   return actions({}, db, "auth", {
     "@/lib/auth": { getUser: async () => user },
+    "@/lib/rate-limit": { clientIp: async () => "ip", isLimited: async () => false, recordHit: async () => {} },
+    "@/lib/notify": { sendPasswordReset: async () => {} },
     "@/lib/session": { createSession: async () => {}, deleteSession: async () => {} },
     "next/navigation": { redirect: (path) => { throw new Error(`REDIRECT:${path}`); } },
   });

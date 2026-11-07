@@ -3,7 +3,7 @@
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { signup } from "@/app/actions/auth";
 import { BUSINESS_TYPES, businessTypeLabel } from "@/lib/business-types";
-import { Button, Field, inputClass } from "@/components/ui";
+import { Button, Field, Notice, inputClass } from "@/components/ui";
 
 // País → zona horaria, moneda y prefijo. "Otro" deja usar la zona del navegador.
 const COUNTRIES = [
@@ -38,6 +38,7 @@ export function SignupForm({ defaultShopName }: { defaultShopName?: string }) {
 
   return (
     <form action={action} className="grid gap-4">
+      {state?.message && <Notice tone="error">{state.message}</Notice>}
       <Field label="Nombre del negocio" error={e.shopName}>
         <input
           name="shopName"
@@ -91,6 +92,16 @@ export function SignupForm({ defaultShopName }: { defaultShopName?: string }) {
           aria-invalid={!!e.password}
         />
       </Field>
+      <label className="flex items-start gap-3 text-[15px] cursor-pointer">
+        <input type="checkbox" name="privacy" required className="mt-1 size-5 shrink-0 accent-[var(--brand)]" aria-invalid={!!e.privacy} />
+        <span>
+          Acepto el{" "}
+          <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="font-semibold text-accent-ink underline underline-offset-4">
+            aviso de privacidad
+          </a>
+          .{e.privacy && <span className="block text-[14px] text-danger mt-1">{e.privacy[0]}</span>}
+        </span>
+      </label>
       <Button type="submit" disabled={pending} className="mt-2 h-12">
         {pending ? "Creando…" : "Crear negocio"}
       </Button>

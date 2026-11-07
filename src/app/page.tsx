@@ -164,6 +164,7 @@ export default function Home() {
             <a href="#funciones">Funciones</a>
             <a href="#preguntas">Preguntas</a>
             <Link href="/ingresar">Ingresar</Link>
+            <Link href="/privacidad">Privacidad</Link>
           </span>
         </div>
       </footer>

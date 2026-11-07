@@ -172,6 +172,10 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
           <Link href="/" className="underline underline-offset-2">
             AppTuServicio
           </Link>
+          {" · "}
+          <Link href="/privacidad" className="underline underline-offset-2">
+            Privacidad
+          </Link>
         </p>
       </div>
     </main>
