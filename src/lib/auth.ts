@@ -8,10 +8,12 @@ import { readSession } from "@/lib/session";
 export const getUser = cache(async () => {
   const session = await readSession();
   if (!session) return null;
-  return db.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: session.userId },
-    select: { id: true, name: true, email: true, mustChangePassword: true },
+    select: { id: true, name: true, email: true, mustChangePassword: true, sessionVersion: true },
   });
+  // Cambiar o recuperar la contraseña sube la versión y cierra las demás sesiones.
+  return user && user.sessionVersion === session.version ? user : null;
 });
 
 /**

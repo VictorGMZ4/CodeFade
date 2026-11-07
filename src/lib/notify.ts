@@ -1,8 +1,15 @@
 import "server-only";
 import { formatDayLong, formatTime } from "@/lib/time";
 
-// Canales de recordatorio. Si falta la clave de un proveedor, el mensaje se
-// escribe en la consola: así el flujo completo se puede probar en local.
+// Canales de recordatorio. Si falta la clave de un proveedor, en desarrollo el
+// mensaje se escribe en la consola para probar el flujo completo. En producción
+// nunca: los registros no deben guardar enlaces de cita, de recuperación ni datos
+// personales, y el envío cuenta como fallido.
+const simulate = process.env.NODE_ENV !== "production";
+
+function missing(channel: string) {
+  console.warn(`[${channel}] Canal sin configurar en producción: no se envió el mensaje.`);
+}
 
 export type ReminderData = {
   customerName: string;
@@ -36,6 +43,7 @@ export async function sendBarberNotice(data: BarberNoticeData): Promise<void> {
   const time = formatTime(data.startsAt, data.timezone);
   const isNew = data.type === "NEW_BOOKING" || data.type === "MANUAL_BY_OWNER";
   if (!token || !phoneId) {
+    if (!simulate) return missing("aviso:whatsapp");
     console.info(`[aviso:whatsapp] ${data.barberPhone}: Hola ${data.barberName}, ${isNew ? "nueva reserva" : "cancelación del cliente"}: ${data.customerName}, ${data.serviceName}, ${day} a las ${time}.`);
     return;
   }
@@ -72,6 +80,10 @@ async function sendWhatsApp(data: ReminderData & { customerPhone: string }): Pro
   const { day, time } = describe(data);
 
   if (!token || !phoneId) {
+    if (!simulate) {
+      missing("recordatorio:whatsapp");
+      return { channel: "whatsapp", ok: false, detail: "WhatsApp sin configurar" };
+    }
     console.info(
       `[recordatorio:whatsapp] ${data.customerPhone}: Hola ${data.customerName}, te recordamos tu cita en ${data.shopName} el ${day} a las ${time}. Gestiónala aquí: ${data.manageUrl}`,
     );
@@ -111,6 +123,10 @@ async function sendEmail(data: ReminderData): Promise<ChannelResult> {
   const subject = `Recordatorio: tu cita en ${data.shopName} el ${day} a las ${time}`;
 
   if (!key) {
+    if (!simulate) {
+      missing("recordatorio:email");
+      return { channel: "email", ok: false, detail: "Correo sin configurar" };
+    }
     console.info(`[recordatorio:email] ${data.customerEmail}: ${subject}`);
     return { channel: "email", ok: true, detail: "consola" };
   }
@@ -150,6 +166,7 @@ export function whatsappLink(phone: string, text: string) {
 export async function sendPasswordReset({ to, name, url }: { to: string; name: string; url: string }): Promise<void> {
   const key = process.env.RESEND_API_KEY;
   if (!key) {
+    if (!simulate) throw new Error("Correo sin configurar: no se pudo enviar la recuperación.");
     console.info(`[recuperación:email] ${to}: Hola ${name}, crea una contraseña nueva: ${url}`);
     return;
   }

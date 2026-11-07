@@ -10,7 +10,8 @@ const MAX_REMINDER_HOURS = 72;
 function authorized(request: Request) {
   const secret = process.env.CRON_SECRET;
   const header = request.headers.get("authorization") ?? "";
-  if (!secret) return false;
+  // Sin secreto, o con el de ejemplo, el cron no se puede llamar.
+  if (!secret || secret.length < 16 || secret === "cambia-esto") return false;
   const expected = Buffer.from(`Bearer ${secret}`);
   const received = Buffer.from(header);
   return expected.length === received.length && timingSafeEqual(expected, received);
@@ -54,7 +55,8 @@ export async function GET(request: Request) {
     const results = await sendReminder({
       customerName: a.customer.name,
       customerPhone: a.customer.phone,
-      customerEmail: a.customer.email,
+      // Las citas nuevas usan el correo escrito al reservar; las antiguas, el del cliente.
+      customerEmail: a.contactEmail ?? a.customer.email,
       shopName: a.shop.name,
       shopAddress: a.shop.address,
       serviceName: a.service.name,

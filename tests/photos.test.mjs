@@ -36,7 +36,8 @@ function harness(context = owner, count = 0) {
       update: async ({ where }) => { assert.equal(where.shopId, "shop"); events.push("update"); },
     },
     shopPhoto: {
-      count: async () => { assert.equal(events.at(-1), "lock"); return count + rows.length; },
+      // Se cuenta dos veces: una comprobación previa sin bloqueo y la definitiva dentro del bloqueo.
+      count: async () => count + rows.length,
       create: async ({ data }) => { rows.push(data); events.push("create"); return data; },
       findFirst: async ({ where }) => { assert.equal(where.shopId, "shop"); return where.id === "foreign" ? null : { id: where.id, barberId: where.id, url: "old-gallery" }; },
       delete: async () => { events.push("delete-row"); },
@@ -52,6 +53,7 @@ function harness(context = owner, count = 0) {
     "@/lib/auth": { requireShop: async () => context }, "@/lib/db": { db },
     "next/cache": { revalidatePath: (...args) => paths.push(args) },
     "@/lib/images": { ...images, processImage: async () => Buffer.from("webp") },
+    "@/lib/rate-limit": { consume: async () => ({ limited: false, id: "hit" }), RATE_LIMIT_MESSAGE: "Demasiados intentos." },
     "@/lib/storage": {
       savePublicImage: async (key) => { events.push("save"); return `/uploads/${key}`; },
       deletePublicImage: async (url) => { events.push(`remove:${url}`); },

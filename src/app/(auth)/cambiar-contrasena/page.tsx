@@ -15,7 +15,7 @@ async function ChangePasswordContent() {
   const user = await getUser();
   if (!user) redirect("/ingresar");
   return <>
-    <PageTitle title="Cambia tu contraseña" description="Elige una contraseña personal para acceder al panel." />
-    <PasswordForm />
+    <PageTitle title="Cambia tu contraseña" description={user.mustChangePassword ? "Elige una contraseña personal para acceder al panel." : "Al cambiarla se cerrará la sesión en tus otros dispositivos."} />
+    <PasswordForm requireCurrent={!user.mustChangePassword} />
   </>;
 }

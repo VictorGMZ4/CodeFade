@@ -9,17 +9,19 @@ datasource db {
 
 // Una cuenta puede administrar una o varias barberías.
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  passwordHash String
-  mustChangePassword Boolean @default(false)
-  createdAt    DateTime     @default(now())
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String
+  passwordHash        String
+  mustChangePassword  Boolean              @default(false)
+  // Se incrementa al cambiar o recuperar la contraseña: invalida las sesiones abiertas.
+  sessionVersion      Int                  @default(0)
+  createdAt           DateTime             @default(now())
   // Fecha de aceptación de privacidad.
-  privacyAcceptedAt DateTime?
+  privacyAcceptedAt   DateTime?
   passwordResetTokens PasswordResetToken[]
-  memberships  Membership[]
-  barbers      Barber[]
+  memberships         Membership[]
+  barbers             Barber[]
 }
 
 enum Role {
@@ -48,17 +50,17 @@ enum BusinessType {
 
 model Shop {
   // Identifica el negocio de demostración.
-  isDemo Boolean @default(false)
-  id                String        @id @default(cuid())
-  slug              String        @unique
+  isDemo            Boolean        @default(false)
+  id                String         @id @default(cuid())
+  slug              String         @unique
   name              String
   // Tipo de negocio; por ahora no modifica las reglas de reserva.
-  businessType      BusinessType  @default(OTRO)
-  timezone          String        @default("America/Bogota")
+  businessType      BusinessType   @default(OTRO)
+  timezone          String         @default("America/Bogota")
   // ISO 4217; los precios se guardan en la unidad mínima (centavos)
-  currency          String        @default("COP")
+  currency          String         @default("COP")
   // Prefijo telefónico por defecto para normalizar números locales
-  countryCode       String        @default("57")
+  countryCode       String         @default("57")
   phone             String?
   address           String?
   // Imágenes públicas del negocio, procesadas a WebP.
@@ -66,14 +68,14 @@ model Shop {
   coverUrl          String?
   photos            ShopPhoto[]
   // Cada cuántos minutos se ofrece un turno (15 → 9:00, 9:15, 9:30...)
-  slotMinutes       Int           @default(15)
+  slotMinutes       Int            @default(15)
   // Antelación mínima para reservar, en minutos
-  leadTimeMinutes   Int           @default(60)
+  leadTimeMinutes   Int            @default(60)
   // Hasta cuántos días hacia adelante se puede reservar
-  bookingWindowDays Int           @default(15)
+  bookingWindowDays Int            @default(15)
   // Cuántas horas antes de la cita se envía el recordatorio
-  reminderHours     Int           @default(24)
-  createdAt         DateTime      @default(now())
+  reminderHours     Int            @default(24)
+  createdAt         DateTime       @default(now())
   memberships       Membership[]
   barbers           Barber[]
   services          Service[]
@@ -83,21 +85,21 @@ model Shop {
 }
 
 model Barber {
-  id           String         @id @default(cuid())
-  shopId       String
-  userId       String?        @unique
-  phone        String?
+  id            String         @id @default(cuid())
+  shopId        String
+  userId        String?        @unique
+  phone         String?
   // Foto pública del profesional.
-  photoUrl     String?
-  photos       ShopPhoto[]
-  user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  name         String
-  active       Boolean        @default(true)
-  createdAt    DateTime       @default(now())
-  shop         Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  workingHours WorkingHours[]
-  timeOff      TimeOff[]
-  appointments Appointment[]
+  photoUrl      String?
+  photos        ShopPhoto[]
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name          String
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  shop          Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  workingHours  WorkingHours[]
+  timeOff       TimeOff[]
+  appointments  Appointment[]
   notifications Notification[]
 
   @@index([shopId])
@@ -159,16 +161,16 @@ model Service {
 model Customer {
   // Fecha de aceptación de privacidad del cliente.
   privacyAcceptedAt DateTime?
-  id           String        @id @default(cuid())
-  shopId       String
-  name         String
+  id                String        @id @default(cuid())
+  shopId            String
+  name              String
   // Normalizado a E.164 (+573001234567)
-  phone        String?
-  email        String?
-  notes        String?
-  createdAt    DateTime      @default(now())
-  shop         Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  appointments Appointment[]
+  phone             String?
+  email             String?
+  notes             String?
+  createdAt         DateTime      @default(now())
+  shop              Shop          @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  appointments      Appointment[]
 
   @@unique([shopId, phone])
 }
@@ -200,6 +202,8 @@ model Appointment {
   // Copia del precio al reservar, para que cambiar la tarifa no altere el histórico
   priceCents     Int
   notes          String?
+  // Correo que escribió quien reservó; los recordatorios van aquí (no al del cliente).
+  contactEmail   String?
   // Permite al cliente cancelar desde el enlace del recordatorio
   manageToken    String            @unique
   reminderSentAt DateTime?
@@ -231,9 +235,9 @@ model Notification {
   type          NotificationType
   readAt        DateTime?
   createdAt     DateTime         @default(now())
-  shop          Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  barber        Barber          @relation(fields: [barberId], references: [id], onDelete: Cascade)
-  appointment   Appointment     @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  shop          Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  barber        Barber           @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  appointment   Appointment      @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
   @@index([barberId, readAt, createdAt])
 }

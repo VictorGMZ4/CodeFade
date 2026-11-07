@@ -109,7 +109,10 @@ test("Un fallo al guardar el aviso no falla la reserva y WhatsApp se difiere", a
     service: { findFirst: async () => ({ id: "service", durationMin: 30, priceCents: 100 }) },
     barber: { findMany: async () => [{ id: "assigned" }] },
     customer: { upsert: async () => ({ id: "customer" }) },
+    $queryRaw: async () => [],
   };
+  db.appointment.count = async () => 0;
+  db.$transaction = (fn) => fn(db);
   const helper = load("src/lib/barber-notifications.ts", { "server-only": {}, "@/lib/db": { db }, "next/server": { after: (fn) => deferred.push(fn) }, "@/lib/notify": { sendBarberNotice: async () => { sent++; } } });
   const start = new Date("2026-11-05T15:00:00Z");
   const api = load("src/lib/booking.ts", { "server-only": {}, "@/lib/db": { db, isOverlapError: () => false }, "@/lib/time": time, "@/lib/availability": { getDaySlots: async () => [{ start: start.toISOString(), barberIds: ["assigned"] }] }, "@/lib/barber-notifications": helper });
@@ -144,8 +147,8 @@ test("El cron solo consulta y reclama citas ONLINE", async () => {
       updateMany: async ({ where }) => { claim = where; return { count: 1 }; },
     } } },
     "@/lib/notify": { sendReminder: async () => { sent++; return [{ ok: true }]; } },
-  }, { process: { env: { CRON_SECRET: "secret" } }, Buffer, Response, URL });
-  const response = await api.GET(new Request("https://example.test/api/cron/reminders", { headers: { authorization: "Bearer secret" } }));
+  }, { process: { env: { CRON_SECRET: "secreto-de-prueba-largo" } }, Buffer, Response, URL });
+  const response = await api.GET(new Request("https://example.test/api/cron/reminders", { headers: { authorization: "Bearer secreto-de-prueba-largo" } }));
   assert.equal(response.status, 200);
   assert.equal(query.source, "ONLINE");
   assert.equal(claim.source, "ONLINE");

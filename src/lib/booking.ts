@@ -17,6 +17,10 @@ export type BookingInput = {
   notes: string | null;
 };
 
+/** Máximo de citas futuras activas por teléfono y negocio. */
+export const MAX_UPCOMING_PER_PHONE = 3;
+export const TOO_MANY_UPCOMING = "Ya tienes varias citas próximas. Escribe al negocio si necesitas otra.";
+
 export type BookingResult =
   | { ok: true; appointmentId: string; manageToken: string }
   | { ok: false; error: string };
@@ -46,27 +50,41 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
   // Con "cualquier barbero" repartimos: primero quien tenga menos citas ese día.
   const candidates = slot.barberIds.length > 1 ? await byLoad(slot.barberIds, input.start, shop) : slot.barberIds;
 
+  // Quien reserva solo demuestra conocer un teléfono, no ser su dueño: si el
+  // cliente ya existe NO se cambian su nombre ni su correo. El correo escrito
+  // se guarda en la cita y los recordatorios de esta cita van solo ahí.
   const customer = await db.customer.upsert({
     where: { shopId_phone: { shopId: shop.id, phone: input.phone } },
     create: { shopId: shop.id, name: input.name, phone: input.phone, email: input.email },
-    update: { name: input.name, ...(input.email ? { email: input.email } : {}) },
+    update: {},
   });
 
   for (const barberId of candidates) {
     try {
-      const appointment = await db.appointment.create({
-        data: {
-          shopId: shop.id,
-          barberId,
-          serviceId: service.id,
-          customerId: customer.id,
-          startsAt: input.start,
-          endsAt: new Date(input.start.getTime() + service.durationMin * 60_000),
-          priceCents: service.priceCents,
-          notes: input.notes,
-          manageToken: randomBytes(18).toString("base64url"),
-        },
+      const appointment = await db.$transaction(async (tx) => {
+        // Serializa las reservas de un mismo teléfono en el negocio para que
+        // peticiones simultáneas no superen el máximo de citas activas.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${shop.id}:${input.phone}`}))::text AS locked`;
+        const upcoming = await tx.appointment.count({
+          where: { shopId: shop.id, customerId: customer.id, status: "BOOKED", startsAt: { gt: new Date() } },
+        });
+        if (upcoming >= MAX_UPCOMING_PER_PHONE) return null;
+        return tx.appointment.create({
+          data: {
+            shopId: shop.id,
+            barberId,
+            serviceId: service.id,
+            customerId: customer.id,
+            startsAt: input.start,
+            endsAt: new Date(input.start.getTime() + service.durationMin * 60_000),
+            priceCents: service.priceCents,
+            notes: input.notes,
+            contactEmail: input.email,
+            manageToken: randomBytes(18).toString("base64url"),
+          },
+        });
       });
+      if (!appointment) return { ok: false, error: TOO_MANY_UPCOMING };
       await notifyBarber(appointment, "NEW_BOOKING");
       return { ok: true, appointmentId: appointment.id, manageToken: appointment.manageToken };
     } catch (error) {

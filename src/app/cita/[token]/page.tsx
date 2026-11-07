@@ -48,7 +48,7 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
           <p className="grid place-items-center size-12 rounded-full bg-ok-soft text-ok text-xl mb-4" aria-hidden>
             ✓
           </p>
-          <h1 className="font-display text-[32px] leading-tight tracking-tight">¡Listo, {a.customer.name.split(" ")[0]}!</h1>
+          <h1 className="font-display text-[32px] leading-tight tracking-tight">¡Listo!</h1>
           <p className="text-muted mt-1">Tu cita está reservada. Te enviaremos un recordatorio antes.</p>
         </div>
       )}

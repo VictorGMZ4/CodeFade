@@ -36,7 +36,7 @@ function harness({ missing = false, valid = false, blocked = "" } = {}) {
     "@/lib/session": { createSession: async () => {}, deleteSession: async () => {} },
     "@/lib/format": { slugify: x => x, normalizePhone: x => x },
     "@/lib/business-types": loadModule("src/lib/business-types.ts"),
-    "@/lib/rate-limit": { RATE_LIMIT_MESSAGE: limited, clientIp: async () => "ip", isLimited: async (key, limit, window) => { checks.push([key, limit, window]); return key === blocked; }, recordHit: async key => hits.push(key) },
+    "@/lib/rate-limit": { RATE_LIMIT_MESSAGE: limited, clientIp: async () => "ip", consume: async (key, limit, window) => { checks.push([key, limit, window]); hits.push(key); return { limited: key === blocked, id: key }; }, release: async (...ids) => { for (const id of ids) hits.splice(hits.indexOf(id), 1); } },
     "@/lib/notify": { sendPasswordReset: async data => sent.push(data) },
     "next/navigation": { redirect: path => { throw new Error(`REDIRECT:${path}`); } },
     "bcryptjs": { compare: async (password, hash) => { comparisons.push(hash); return valid; }, hash: require("bcryptjs").hash },
@@ -46,7 +46,7 @@ function harness({ missing = false, valid = false, blocked = "" } = {}) {
 }
 const loginForm = () => form({ email: "ana@test.com", password: "incorrecta" });
 for (const blocked of ["login:email:ana@test.com", "login:ip:ip"]) test(`Login bloquea ${blocked} antes de comparar`, async () => {
-  const h = harness({ blocked }); assert.equal((await h.api.login(undefined, loginForm())).message, limited); assert.equal(h.comparisons.length, 0); assert.equal(h.hits.length, 0);
+  const h = harness({ blocked }); assert.equal((await h.api.login(undefined, loginForm())).message, limited); assert.equal(h.comparisons.length, 0); assert.deepEqual(h.hits, ["login:email:ana@test.com", "login:ip:ip"]);
 });
 test("Login solo cuenta fallos y usa hash ficticio para cuentas inexistentes", async () => {
   for (const missing of [false, true]) { const h = harness({ missing }); await h.api.login(undefined, loginForm()); assert.deepEqual(h.hits, ["login:email:ana@test.com", "login:ip:ip"]); assert.equal(h.comparisons.length, 1); if (missing) assert.notEqual(h.comparisons[0], "stored"); assert.deepEqual(h.checks, [["login:email:ana@test.com", 5, 900000], ["login:ip:ip", 20, 900000]]); }
@@ -54,12 +54,12 @@ test("Login solo cuenta fallos y usa hash ficticio para cuentas inexistentes", a
 });
 test("Registro limita los envíos válidos por IP", async () => {
   const values = { businessType: "SPA", shopName: "Spa", name: "Ana", email: "ana@test.com", password: "password123", timezone: "America/Bogota", currency: "COP", countryCode: "57", privacy: "on" };
-  const h = harness({ blocked: "signup:ip:ip" }); assert.equal((await h.api.signup(undefined, form(values))).message, limited); assert.deepEqual(h.checks[0], ["signup:ip:ip", 5, 3600000]); assert.equal(h.hits.length, 0);
+  const h = harness({ blocked: "signup:ip:ip" }); assert.equal((await h.api.signup(undefined, form(values))).message, limited); assert.deepEqual(h.checks[0], ["signup:ip:ip", 5, 3600000]); assert.deepEqual(h.hits, ["signup:ip:ip"]);
   const allowed = harness(); await allowed.api.signup(undefined, form(values)); assert.deepEqual(allowed.hits, ["signup:ip:ip"]);
 });
 test("Reservas cuentan cada envío validado y bloquean por IP", async () => {
   const values = { serviceId: "s", start: "2026-12-01T12:00:00Z", name: "Ana", phone: "3001234567", privacy: "on" };
-  const h = harness({ blocked: "book:ip:ip" }); assert.equal((await h.booking.book("shop", undefined, form(values))).error, limited); assert.deepEqual(h.checks[0], ["book:ip:ip", 10, 3600000]); assert.equal(h.hits.length, 0);
+  const h = harness({ blocked: "book:ip:ip" }); assert.equal((await h.booking.book("shop", undefined, form(values))).error, limited); assert.deepEqual(h.checks[0], ["book:ip:ip", 10, 3600000]); assert.deepEqual(h.hits, ["book:ip:ip"]);
   const allowed = harness(); await allowed.booking.book("shop", undefined, form({})); assert.equal(allowed.hits.length, 0); await allowed.booking.book("shop", undefined, form(values)); assert.deepEqual(allowed.hits, ["book:ip:ip"]);
 });
 test("Recuperación responde igual, limita correo/IP y guarda solo hash con una hora de vida", async () => {
@@ -94,22 +94,38 @@ test("clientIp prioriza la primera IP reenviada y aplica las alternativas", asyn
     assert.equal(await api.clientIp(), expected);
   }
 });
-test("El límite cuenta solo la clave y la ventana indicada, incluyendo el umbral", async () => {
+test("El límite gasta el intento antes de contar, respeta clave y ventana, y release lo devuelve", async () => {
   const now = Date.now();
-  const rows = [0, 1, 2, 3, 4].map(() => ({ key: "login:a", createdAt: new Date(now) }));
-  rows.push({ key: "login:a", createdAt: new Date(now - 3600000) }, { key: "login:b", createdAt: new Date(now) });
+  let seq = 0;
+  const rows = [0, 1, 2, 3].map(() => ({ id: `r${seq++}`, key: "login:a", createdAt: new Date(now) }));
+  rows.push({ id: `r${seq++}`, key: "login:a", createdAt: new Date(now - 3600000) }, { id: `r${seq++}`, key: "login:b", createdAt: new Date(now) });
   const api = loadModule("src/lib/rate-limit.ts", {
     "next/headers": {}, "@/lib/db": { db: { rateLimitHit: {
       count: async ({ where }) => rows.filter(r => r.key === where.key && r.createdAt >= where.createdAt.gte).length,
-      create: async ({ data }) => rows.push({ ...data, createdAt: new Date() }),
+      create: async ({ data }) => { const row = { id: `r${seq++}`, ...data, createdAt: new Date() }; rows.push(row); return { id: row.id }; },
+      deleteMany: async ({ where }) => { for (const id of where.id?.in ?? []) rows.splice(rows.findIndex(r => r.id === id), 1); },
+    } } },
+  });
+  const fifth = await api.consume("login:a", 5, 900000);
+  assert.equal(fifth.limited, false);
+  assert.equal((await api.consume("login:a", 5, 900000)).limited, true);
+  await api.release(fifth.id);
+  assert.equal(rows.filter(r => r.key === "login:a" && r.createdAt >= new Date(now - 900000)).length, 5);
+  assert.equal((await api.consume("login:b", 2, 900000)).limited, false);
+});
+
+test("Peticiones simultáneas no superan el límite", async () => {
+  let seq = 0;
+  const rows = [];
+  const api = loadModule("src/lib/rate-limit.ts", {
+    "next/headers": {}, "@/lib/db": { db: { rateLimitHit: {
+      count: async ({ where }) => { await new Promise(r => setTimeout(r, 1)); return rows.filter(r => r.key === where.key).length; },
+      create: async ({ data }) => { const row = { id: `r${seq++}`, ...data }; rows.push(row); return { id: row.id }; },
       deleteMany: async () => {},
     } } },
   });
-  assert.equal(await api.isLimited("login:a", 5, 900000), true);
-  assert.equal(await api.isLimited("login:a", 6, 900000), false);
-  await api.recordHit("login:a");
-  assert.equal(await api.isLimited("login:a", 6, 900000), true);
-  assert.equal(await api.isLimited("login:b", 2, 900000), false);
+  const results = await Promise.all(Array.from({ length: 12 }, () => api.consume("book:ip:x", 10, 3600000)));
+  assert.ok(results.filter(r => !r.limited).length <= 10);
 });
 test("Un fallo de correo mantiene la respuesta genérica", async () => {
   const h = harness(); h.mocks["@/lib/notify"].sendPasswordReset = async () => { throw new Error("Proveedor"); };

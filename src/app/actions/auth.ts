@@ -1,7 +1,7 @@
 "use server";
 
 import { createHash, randomBytes } from "node:crypto";
-import { clientIp, isLimited, recordHit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { clientIp, consume, release, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 import { sendPasswordReset } from "@/lib/notify";
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
@@ -41,9 +41,7 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
     return { errors: { timezone: ["Zona horaria no válida."] } };
   }
 
-  const key = `signup:ip:${await clientIp()}`;
-  if (await isLimited(key, 5, 60 * 60 * 1000)) return { message: RATE_LIMIT_MESSAGE };
-  await recordHit(key);
+  if ((await consume(`signup:ip:${await clientIp()}`, 5, 60 * 60 * 1000)).limited) return { message: RATE_LIMIT_MESSAGE };
 
   const exists = await db.user.findUnique({ where: { email: data.email } });
   if (exists) return { errors: { email: ["Ya existe una cuenta con este correo."] } };
@@ -78,7 +76,7 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
     },
   });
 
-  await createSession(user.id);
+  await createSession(user.id, user.sessionVersion);
   redirect("/panel/servicios?bienvenida=1");
 }
 
@@ -104,19 +102,22 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
   const parsed = LoginSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
 
-  const emailKey = `login:email:${parsed.data.email}`;
-  const ipKey = `login:ip:${await clientIp()}`;
-  const limits = await Promise.all([isLimited(emailKey, 5, 15 * 60 * 1000), isLimited(ipKey, 20, 15 * 60 * 1000)]);
-  if (limits.some(Boolean)) return { message: RATE_LIMIT_MESSAGE };
+  // Se gasta el intento antes de comprobar la contraseña (también ante
+  // peticiones simultáneas) y se devuelve si el ingreso es correcto: así solo
+  // cuentan los fallos.
+  const window = 15 * 60 * 1000;
+  const attempts = await Promise.all([
+    consume(`login:email:${parsed.data.email}`, 5, window),
+    consume(`login:ip:${await clientIp()}`, 20, window),
+  ]);
+  if (attempts.some((a) => a.limited)) return { message: RATE_LIMIT_MESSAGE };
 
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   const valid = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
-  if (!user || !valid) {
-    await Promise.all([recordHit(emailKey), recordHit(ipKey)]);
-    return { message: "Correo o contraseña incorrectos." };
-  }
+  if (!user || !valid) return { message: "Correo o contraseña incorrectos." };
+  await release(...attempts.map((a) => a.id));
 
-  await createSession(user.id);
+  await createSession(user.id, user.sessionVersion);
   redirect(user.mustChangePassword ? "/cambiar-contrasena" : "/panel");
 }
 
@@ -132,10 +133,27 @@ export async function changePassword(_state: AuthState, formData: FormData): Pro
   if (!user) redirect("/ingresar");
   const parsed = PasswordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
-  await db.user.update({
-    where: { id: user.id },
-    data: { passwordHash: await bcrypt.hash(parsed.data.password, 12), mustChangePassword: false },
+  // Quien solo tiene la sesión abierta no puede cambiarla sin la contraseña
+  // actual. Excepción: el primer cambio obligatorio de la contraseña temporal.
+  if (!user.mustChangePassword) {
+    const current = formData.get("current");
+    const stored = await db.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });
+    if (typeof current !== "string" || !current || !stored || !(await bcrypt.compare(current, stored.passwordHash))) {
+      return { errors: { current: ["La contraseña actual no es correcta."] } };
+    }
+  }
+  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const updated = await db.$transaction(async (tx) => {
+    // Los enlaces de recuperación pendientes dejan de valer.
+    await tx.passwordResetToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } });
+    return tx.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false, sessionVersion: { increment: 1 } },
+      select: { sessionVersion: true },
+    });
   });
+  // Cierra las demás sesiones y mantiene abierta la de este dispositivo.
+  await createSession(user.id, updated.sessionVersion);
   redirect("/panel");
 }
 
@@ -150,12 +168,10 @@ const RESET_INVALID = "Este enlace ya no es válido. Pide uno nuevo.";
 export async function requestPasswordReset(_state: AuthState, formData: FormData): Promise<AuthState> {
   const parsed = z.string().trim().toLowerCase().pipe(z.email()).safeParse(formData.get("email"));
   if (!parsed.success) return { message: RESET_SENT };
-  const emailKey = `reset:email:${parsed.data}`;
-  const ipKey = `reset:ip:${await clientIp()}`;
-  const limits = await Promise.all([isLimited(emailKey, 3, 60 * 60 * 1000), isLimited(ipKey, 10, 60 * 60 * 1000)]);
+  const hour = 60 * 60 * 1000;
+  const limits = await Promise.all([consume(`reset:email:${parsed.data}`, 3, hour), consume(`reset:ip:${await clientIp()}`, 10, hour)]);
   // Tampoco se revela el estado del límite de un correo.
-  if (limits.some(Boolean)) return { message: RESET_SENT };
-  await Promise.all([recordHit(emailKey), recordHit(ipKey)]);
+  if (limits.some((l) => l.limited)) return { message: RESET_SENT };
   const user = await db.user.findUnique({ where: { email: parsed.data } });
   if (user) {
     const token = randomBytes(32).toString("base64url");
@@ -193,7 +209,7 @@ export async function resetPassword(token: string, _state: AuthState, formData: 
       where: { id: reset.id, usedAt: null, expiresAt: { gt: new Date() } }, data: { usedAt: new Date() },
     });
     if (claimed.count !== 1) return false;
-    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash, mustChangePassword: false } });
+    await tx.user.update({ where: { id: reset.userId }, data: { passwordHash, mustChangePassword: false, sessionVersion: { increment: 1 } } });
     return true;
   });
   if (!saved) return { message: RESET_INVALID };

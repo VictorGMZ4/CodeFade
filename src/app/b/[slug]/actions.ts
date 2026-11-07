@@ -1,10 +1,10 @@
 "use server";
 
-import { clientIp, isLimited, recordHit, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
+import { clientIp, consume, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 import { bookableDays, getDaySlots, getSlots } from "@/lib/availability";
-import { bookAppointment } from "@/lib/booking";
+import { bookAppointment, MAX_UPCOMING_PER_PHONE, TOO_MANY_UPCOMING } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { normalizePhone } from "@/lib/format";
 import { isValidDay } from "@/lib/time";
@@ -72,17 +72,14 @@ export async function book(slug: string, _state: BookingState, formData: FormDat
   const phone = normalizePhone(data.phone, shop.countryCode);
   if (!phone) return { errors: { phone: ["Número no válido."] } };
 
-  const key = `book:ip:${await clientIp()}`;
-  if (await isLimited(key, 10, 60 * 60 * 1000)) return { error: RATE_LIMIT_MESSAGE };
-  await recordHit(key);
+  if ((await consume(`book:ip:${await clientIp()}`, 10, 60 * 60 * 1000)).limited) return { error: RATE_LIMIT_MESSAGE };
 
   // Evita que un mismo número acapare la agenda.
   const upcoming = await db.appointment.count({
     where: { shopId: shop.id, status: "BOOKED", startsAt: { gt: new Date() }, customer: { phone } },
   });
-  if (upcoming >= 3) {
-    return { error: "Ya tienes varias citas próximas. Escribe al negocio si necesitas otra." };
-  }
+  // Comprobación rápida; la definitiva se hace al crear la cita (bookAppointment).
+  if (upcoming >= MAX_UPCOMING_PER_PHONE) return { error: TOO_MANY_UPCOMING };
 
   const result = await bookAppointment(shop, {
     serviceId: data.serviceId,

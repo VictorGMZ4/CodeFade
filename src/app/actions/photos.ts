@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { ImageError, processImage } from "@/lib/images";
 import { savePublicImage, deletePublicImage } from "@/lib/storage";
+import { consume, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 export type PhotoResult = { ok: true } | { error: string };
 const denied = "No tienes permiso para esta acción.";
@@ -29,6 +30,8 @@ async function locked<T>(shopId: string, change: (tx: Prisma.TransactionClient) 
 async function upload(formData: FormData, shopId: string, kind: "logo" | "cover" | "avatar" | "gallery", type: string) {
   const file = formData.get("photo");
   if (!(file instanceof File)) throw new ImageError("Selecciona una foto.");
+  // Procesar y subir cuesta CPU y almacenamiento: como mucho 30 fotos por hora y negocio.
+  if ((await consume(`photos:shop:${shopId}`, 30, 60 * 60 * 1000)).limited) throw new ImageError(RATE_LIMIT_MESSAGE);
   const data = await processImage(file, kind);
   return savePublicImage(`shops/${shopId}/${type}-${randomUUID()}.webp`, data, "image/webp");
 }
@@ -113,6 +116,9 @@ export async function addGalleryPhoto(formData: FormData): Promise<PhotoResult> 
   if (!isOwner && !barberId) return { error: denied };
   let uploaded: string | null = null;
   try {
+    // Comprobación previa para no procesar ni subir si ya está llena; la
+    // definitiva, con bloqueo, se hace al guardar.
+    if (await db.shopPhoto.count({ where: { shopId: shop.id } }) >= 12) return { error: galleryFull };
     const url = await upload(formData, shop.id, "gallery", "gallery");
     uploaded = url;
     await locked(shop.id, async (tx) => {

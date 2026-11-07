@@ -209,7 +209,7 @@ test("Quitar acceso solo elimina la membresía STAFF de la barbería actual", as
 function authActions(user, db = {}) {
   return actions({}, db, "auth", {
     "@/lib/auth": { getUser: async () => user },
-    "@/lib/rate-limit": { clientIp: async () => "ip", isLimited: async () => false, recordHit: async () => {} },
+    "@/lib/rate-limit": { clientIp: async () => "ip", consume: async () => ({ limited: false, id: "hit" }), release: async () => {} },
     "@/lib/notify": { sendPasswordReset: async () => {} },
     "@/lib/session": { createSession: async () => {}, deleteSession: async () => {} },
     "next/navigation": { redirect: (path) => { throw new Error(`REDIRECT:${path}`); } },
@@ -225,15 +225,42 @@ test("Cambiar contraseña requiere sesión y valida longitud y confirmación", a
   assert.equal(result.errors.confirmation[0], "Las contraseñas deben coincidir.");
 });
 
-test("Cambiar contraseña elimina la obligación, cifra con coste 12 y redirige al panel", async () => {
-  let updated;
-  const api = authActions({ id: "user" }, { user: { update: async (q) => { updated = q; } } });
+test("Cambiar contraseña elimina la obligación, cifra con coste 12, cierra otras sesiones y redirige al panel", async () => {
+  let updated, invalidated;
+  const db = {
+    user: { update: async (q) => { updated = q; return { sessionVersion: 3 }; } },
+    passwordResetToken: { updateMany: async (q) => { invalidated = q; return { count: 1 }; } },
+  };
+  db.$transaction = (fn) => fn(db);
+  const api = authActions({ id: "user", mustChangePassword: true }, db);
   const form = new FormData(); form.set("password", "personal123"); form.set("confirmation", "personal123");
   await assert.rejects(api.changePassword(undefined, form), /REDIRECT:\/panel/);
   assert.equal(updated.where.id, "user");
   assert.equal(updated.data.mustChangePassword, false);
   assert.equal(require("bcryptjs").getRounds(updated.data.passwordHash), 12);
   assert.equal(await require("bcryptjs").compare("personal123", updated.data.passwordHash), true);
+  assert.equal(updated.data.sessionVersion.increment, 1);
+  assert.equal(invalidated.where.userId, "user");
+});
+
+test("Cambiar contraseña sin ser obligatorio exige la contraseña actual", async () => {
+  const passwordHash = await require("bcryptjs").hash("actual1234", 4);
+  let updated = false;
+  const db = {
+    user: { findUnique: async () => ({ passwordHash }), update: async () => { updated = true; return { sessionVersion: 1 }; } },
+    passwordResetToken: { updateMany: async () => ({ count: 0 }) },
+  };
+  db.$transaction = (fn) => fn(db);
+  const api = authActions({ id: "user", mustChangePassword: false }, db);
+  for (const current of [undefined, "", "incorrecta"]) {
+    const form = new FormData(); form.set("password", "personal123"); form.set("confirmation", "personal123");
+    if (current !== undefined) form.set("current", current);
+    assert.equal((await api.changePassword(undefined, form)).errors.current[0], "La contraseña actual no es correcta.");
+  }
+  assert.equal(updated, false);
+  const form = new FormData(); form.set("password", "personal123"); form.set("confirmation", "personal123"); form.set("current", "actual1234");
+  await assert.rejects(api.changePassword(undefined, form), /REDIRECT:\/panel/);
+  assert.equal(updated, true);
 });
 
 test("Login con contraseña temporal redirige a cambiar contraseña", async () => {
