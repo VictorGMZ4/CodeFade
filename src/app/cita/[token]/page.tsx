@@ -32,6 +32,10 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
   });
   if (!a) notFound();
 
+  // El enlace caduca cuando termina la cita (también si se canceló): desde
+  // ese momento no se muestra ningún dato de la reserva.
+  if (a.endsAt <= new Date()) return <ExpiredLink slug={a.shop.slug} />;
+
   const tz = a.shop.timezone;
   const upcoming = a.status === "BOOKED" && a.startsAt > new Date();
   const calendarUrl = googleCalendarUrl({
@@ -107,6 +111,22 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
           Reservar otra
         </Link>
       </p>
+    </main>
+  );
+}
+
+function ExpiredLink({ slug }: { slug: string }) {
+  return (
+    <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-12">
+      <Card className="p-6 sm:p-8">
+        <h1 className="font-display text-[28px] leading-tight tracking-tight">Este enlace ya caducó</h1>
+        <p className="text-muted mt-2">
+          La cita ya terminó, así que sus datos ya no están disponibles aquí. Si quieres volver, puedes reservar otra.
+        </p>
+        <Link href={`/b/${slug}`} className={buttonClass("primary", "mt-6 w-full sm:w-auto")}>
+          Reservar otra cita
+        </Link>
+      </Card>
     </main>
   );
 }
