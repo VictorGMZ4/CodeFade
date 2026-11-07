@@ -56,6 +56,10 @@ model Shop {
   countryCode       String        @default("57")
   phone             String?
   address           String?
+  // Imágenes públicas del negocio, procesadas a WebP.
+  logoUrl           String?
+  coverUrl          String?
+  photos            ShopPhoto[]
   // Cada cuántos minutos se ofrece un turno (15 → 9:00, 9:15, 9:30...)
   slotMinutes       Int           @default(15)
   // Antelación mínima para reservar, en minutos
@@ -78,6 +82,9 @@ model Barber {
   shopId       String
   userId       String?        @unique
   phone        String?
+  // Foto pública del profesional.
+  photoUrl     String?
+  photos       ShopPhoto[]
   user         User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   name         String
   active       Boolean        @default(true)
@@ -89,6 +96,20 @@ model Barber {
   notifications Notification[]
 
   @@index([shopId])
+}
+
+// Galería pública del negocio. Conservamos la foto si se elimina su autor.
+model ShopPhoto {
+  id        String   @id @default(cuid())
+  shopId    String
+  // Null si el dueño no tiene perfil o se ha eliminado el profesional.
+  barberId  String?
+  url       String
+  createdAt DateTime @default(now())
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  barber    Barber?  @relation(fields: [barberId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, createdAt])
 }
 
 // Franjas de trabajo semanales. Varias por día permiten pausas (p. ej. almuerzo).

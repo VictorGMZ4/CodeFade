@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Img } from "@/components/photo";
 import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import Link from "next/link";
@@ -37,9 +38,13 @@ async function TeamPageContent() {
             const days = new Set(b.workingHours.map((h) => h.weekday));
             return (
               <Link key={b.id} href={`/panel/equipo/${b.id}`} className="press flex items-center gap-4 p-4 hover:bg-paper/60">
-                <span className="grid place-items-center size-10 rounded-full bg-accent-soft text-accent-ink font-medium shrink-0">
-                  {b.name.slice(0, 1).toUpperCase()}
-                </span>
+                {b.photoUrl ? (
+                  <Img src={b.photoUrl} alt="" className="size-10 rounded-full shrink-0" />
+                ) : (
+                  <span className="grid place-items-center size-10 rounded-full bg-accent-soft text-accent-ink font-medium shrink-0">
+                    {b.name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className={b.active ? "font-medium truncate" : "font-medium truncate text-muted"}>
                     {b.name}

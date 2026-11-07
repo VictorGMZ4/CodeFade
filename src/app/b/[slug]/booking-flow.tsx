@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { Img } from "@/components/photo";
 import { buttonClass, cx, Field, inputClass, Notice } from "@/components/ui";
 import { book, fetchOpenDays, fetchSlots, type BookingState } from "./actions";
 
 type Service = { id: string; name: string; duration: string; price: string };
-type Barber = { id: string; name: string };
+type Barber = { id: string; name: string; photoUrl?: string | null };
 
 const ANY = "";
 const WEEK_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
@@ -172,12 +173,16 @@ export function BookingFlow({
                   scrollTo(timeRef);
                 }}
               >
-                <span
-                  aria-hidden
-                  className="grid place-items-center size-9 shrink-0 rounded-full bg-raised text-ink text-[14px] font-bold"
-                >
-                  {b.id ? b.name.slice(0, 1).toUpperCase() : "★"}
-                </span>
+                {"photoUrl" in b && b.photoUrl ? (
+                  <Img src={b.photoUrl} alt="" className="size-9 shrink-0 rounded-full" />
+                ) : (
+                  <span
+                    aria-hidden
+                    className="grid place-items-center size-9 shrink-0 rounded-full bg-raised text-ink text-[14px] font-bold"
+                  >
+                    {b.id ? b.name.slice(0, 1).toUpperCase() : "★"}
+                  </span>
+                )}
                 <span className="truncate font-semibold">{b.name}</span>
               </Choice>
             ))}

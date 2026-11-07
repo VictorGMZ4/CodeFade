@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/panel/equipo", label: "Equipo", icon: PeopleIcon },
   { href: "/panel/servicios", label: "Servicios", icon: ScissorsIcon },
   { href: "/panel/ajustes", label: "Ajustes", icon: GearIcon },
+  { href: "/panel/galeria", label: "Galería", icon: PhotoIcon },
 ] as const;
 
 type Variant = { variant: "top" | "bottom"; role: "OWNER" | "STAFF"; barberId: string | null };
@@ -31,7 +32,7 @@ function CurrentNav(props: Variant) {
 }
 
 function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: string | null }) {
-  const links = role === "OWNER" ? LINKS : [LINKS[0], LINKS[1], LINKS[2], ...(barberId ? [{ href: `/panel/equipo/${barberId}`, label: "Mi horario", icon: CalendarIcon }] : [])];
+  const links = role === "OWNER" ? LINKS : [LINKS[0], LINKS[1], LINKS[2], ...(barberId ? [{ href: `/panel/equipo/${barberId}`, label: "Mi horario", icon: CalendarIcon }, LINKS[6]] : [])];
   const isActive = (href: string) =>
     pathname !== null && (href === "/panel" ? pathname === href : pathname.startsWith(href));
 
@@ -57,7 +58,7 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
   }
 
   return (
-    <ul className={cx("grid", role === "OWNER" ? "grid-cols-5" : barberId ? "grid-cols-4" : "grid-cols-3")}>
+    <ul className={cx("grid", role === "OWNER" ? "grid-cols-5" : barberId ? "grid-cols-5" : "grid-cols-3")}>
       {(role === "OWNER" ? links.slice(0, 4) : links).map(({ href, label, icon: Icon }) => (
         <li key={href}>
           <Link
@@ -75,7 +76,7 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
           </Link>
         </li>
       ))}
-      {role === "OWNER" && <li className="relative"><MoreMenu key={pathname} active={isActive("/panel/servicios") || isActive("/panel/ajustes")} pathname={pathname} /></li>}
+      {role === "OWNER" && <li className="relative"><MoreMenu key={pathname} active={isActive("/panel/servicios") || isActive("/panel/ajustes") || isActive("/panel/galeria")} pathname={pathname} /></li>}
     </ul>
   );
 }
@@ -159,6 +160,16 @@ function PeopleIcon() {
 
 function CustomersIcon() {
   return <svg {...iconProps}><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="10" cy="9" r="2.5" /><path d="M5.5 17c.6-2.2 2.1-3.5 4.5-3.5s3.9 1.3 4.5 3.5M17 8h1M17 12h1M17 16h1" /></svg>;
+}
+
+function PhotoIcon() {
+  return (
+    <svg {...iconProps}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="m21 16-5-5-9 9" />
+    </svg>
+  );
 }
 
 function GearIcon() {

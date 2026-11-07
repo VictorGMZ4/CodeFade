@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache, Suspense } from "react";
+import { Img } from "@/components/photo";
 import { PageSkeleton } from "@/components/skeleton";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
@@ -16,8 +17,9 @@ const getShop = cache((slug: string) =>
       barbers: {
         where: { active: true },
         orderBy: { createdAt: "asc" },
-        select: { id: true, name: true, workingHours: { select: { weekday: true, startMin: true, endMin: true } } },
+        select: { id: true, name: true, photoUrl: true, workingHours: { select: { weekday: true, startMin: true, endMin: true } } },
       },
+      photos: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { id: true, url: true } },
     },
   }),
 );
@@ -80,11 +82,17 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
 
   return (
     <main className="flex-1 w-full max-w-[1100px] mx-auto px-3 sm:px-6 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-10 lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-8 lg:items-start">
-      <header className="bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7 lg:sticky lg:top-6 mb-4 lg:mb-0">
+      <header className="bg-surface rounded-2xl border border-line shadow-soft overflow-hidden lg:sticky lg:top-6 mb-4 lg:mb-0">
+        {shop.coverUrl && <Img src={shop.coverUrl} alt="" loading="eager" className="w-full aspect-[8/3]" />}
+        <div className="p-5 sm:p-7">
         <div className="flex items-center gap-3">
-          <span aria-hidden className="grid place-items-center size-12 shrink-0 rounded-xl bg-brand text-brand-ink text-[20px] font-bold">
-            {shop.name.slice(0, 1)}
-          </span>
+          {shop.logoUrl ? (
+            <Img src={shop.logoUrl} alt={`Logo de ${shop.name}`} loading="eager" className={shop.coverUrl ? "size-16 shrink-0 rounded-2xl border-4 border-surface -mt-12 shadow-soft" : "size-12 shrink-0 rounded-xl"} />
+          ) : (
+            <span aria-hidden className="grid place-items-center size-12 shrink-0 rounded-xl bg-brand text-brand-ink text-[20px] font-bold">
+              {shop.name.slice(0, 1)}
+            </span>
+          )}
           <h1 className="font-display text-[24px] sm:text-[28px] leading-tight">{shop.name}</h1>
         </div>
         <div className="mt-4 grid gap-1 text-[15px]">
@@ -115,6 +123,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
           <p className="text-[15px] font-semibold">Horario</p>
           <HoursList hours={hours} />
         </div>
+        </div>
       </header>
 
       <div>
@@ -128,7 +137,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
               duration: formatDuration(s.durationMin),
               price: formatPrice(s.priceCents, shop.currency),
             }))}
-            barbers={shop.barbers.map(({ id, name }) => ({ id, name }))}
+            barbers={shop.barbers.map(({ id, name, photoUrl }) => ({ id, name, photoUrl }))}
             timezone={shop.timezone}
           />
         ) : (
@@ -146,7 +155,19 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
             )}
           </p>
         )}
-        <p className="text-[13px] text-muted text-center pb-10 -mt-24">
+        {shop.photos.length > 0 && (
+          <section className="relative bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7 -mt-28" aria-labelledby="trabajos">
+            <h2 id="trabajos" className="font-display text-[22px]">Nuestros trabajos</h2>
+            <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
+              {shop.photos.map((p) => (
+                <li key={p.id}>
+                  <Img src={p.url} alt={`Trabajo de ${shop.name}`} className="aspect-square w-full rounded-xl" />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <p className={shop.photos.length > 0 ? "text-[13px] text-muted text-center mt-6 pb-[calc(8rem+env(safe-area-inset-bottom))]" : "text-[13px] text-muted text-center pb-10 -mt-24"}>
           Reservas con{" "}
           <Link href="/" className="underline underline-offset-2">
             AppTuServicio

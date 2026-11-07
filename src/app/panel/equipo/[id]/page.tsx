@@ -4,6 +4,8 @@ import { PageSkeleton } from "@/components/skeleton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { deleteTimeOff } from "@/app/actions/panel";
+import { removeBarberPhoto, saveBarberPhoto } from "@/app/actions/photos";
+import { PhotoPicker } from "@/components/photo";
 import { Card } from "@/components/ui";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -44,6 +46,19 @@ async function BarberPageContent({ params }: PageProps<"/panel/equipo/[id]">) {
         ‹ Equipo
       </Link>}
       <h1 className="font-display text-[28px] leading-tight tracking-tight mb-6">{barber.name}</h1>
+
+      <Card className="p-5 mb-6">
+        <PhotoPicker
+          label="Foto"
+          hint="La ven tus clientes al elegir con quién reservar. Se recorta en círculo."
+          url={barber.photoUrl}
+          fallback={barber.name.slice(0, 1).toUpperCase()}
+          shape="round"
+          upload={saveBarberPhoto}
+          remove={removeBarberPhoto.bind(null, barber.id)}
+          fields={{ barberId: barber.id }}
+        />
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-[1fr_340px] md:items-start">
         <Card className="p-5">

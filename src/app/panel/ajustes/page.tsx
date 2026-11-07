@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { removeShopCover, removeShopLogo, saveShopCover, saveShopLogo } from "@/app/actions/photos";
+import { PhotoPicker } from "@/components/photo";
 import { PageSkeleton } from "@/components/skeleton";
 import { Card, PageTitle } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
@@ -27,6 +29,27 @@ async function SettingsPageContent() {
         <h2 className="font-medium mb-1">Tu enlace de reservas</h2>
         <p className="text-sm text-muted mb-4">Ponlo en tu bio de Instagram, en WhatsApp Business o en Google Maps.</p>
         <CopyLink url={`${base}/b/${shop.slug}`} />
+      </Card>
+      <Card className="p-5 mb-6 grid gap-6">
+        <h2 className="font-medium -mb-2">Imagen del negocio</h2>
+        <PhotoPicker
+          label="Logo"
+          hint="Se ve en tu página de reservas. Se recorta en cuadrado."
+          url={shop.logoUrl}
+          fallback={shop.name.slice(0, 1).toUpperCase()}
+          shape="square"
+          upload={saveShopLogo}
+          remove={removeShopLogo}
+        />
+        <PhotoPicker
+          label="Portada"
+          hint="Imagen ancha arriba de tu página de reservas: el local, tu equipo o un trabajo."
+          url={shop.coverUrl}
+          fallback=""
+          shape="wide"
+          upload={saveShopCover}
+          remove={removeShopCover}
+        />
       </Card>
       <Card className="p-5">
         <SettingsForm
