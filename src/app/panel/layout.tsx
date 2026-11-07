@@ -42,8 +42,9 @@ export default function PanelLayout({ children }: LayoutProps<"/panel">) {
 }
 
 async function ShopName() {
-  const { shop, user } = await requireShop();
+  const { shop, user, hasWhatsApp } = await requireShop();
   if (user.mustChangePassword) redirect("/cambiar-contrasena");
+  if (!hasWhatsApp) redirect("/completar-whatsapp");
   return shop.name;
 }
 

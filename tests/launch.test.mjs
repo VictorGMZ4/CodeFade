@@ -34,7 +34,7 @@ function harness({ missing = false, valid = false, blocked = "" } = {}) {
   const mocks = {
     "@/lib/db": { db }, "@/lib/auth": { getUser: async () => null },
     "@/lib/session": { createSession: async () => {}, deleteSession: async () => {} },
-    "@/lib/format": { slugify: x => x, normalizePhone: x => x },
+    "@/lib/format": { slugify: x => x, normalizePhone: x => x, parseWhatsApp: loadModule("src/lib/format.ts").parseWhatsApp },
     "@/lib/business-types": loadModule("src/lib/business-types.ts"),
     "@/lib/rate-limit": { RATE_LIMIT_MESSAGE: limited, clientIp: async () => "ip", consume: async (key, limit, window) => { checks.push([key, limit, window]); hits.push(key); return { limited: key === blocked, id: key }; }, release: async (...ids) => { for (const id of ids) hits.splice(hits.indexOf(id), 1); } },
     "@/lib/notify": { sendPasswordReset: async data => sent.push(data) },
@@ -53,7 +53,7 @@ test("Login solo cuenta fallos y usa hash ficticio para cuentas inexistentes", a
   const h = harness({ valid: true }); await assert.rejects(h.api.login(undefined, loginForm()), /REDIRECT/); assert.equal(h.hits.length, 0);
 });
 test("Registro limita los envíos válidos por IP", async () => {
-  const values = { businessType: "SPA", shopName: "Spa", name: "Ana", email: "ana@test.com", password: "password123", timezone: "America/Bogota", currency: "COP", countryCode: "57", privacy: "on" };
+  const values = { businessType: "SPA", shopName: "Spa", name: "Ana", email: "ana@test.com", password: "password123", timezone: "America/Bogota", currency: "COP", countryCode: "57", privacy: "on", phone: "3001234567" };
   const h = harness({ blocked: "signup:ip:ip" }); assert.equal((await h.api.signup(undefined, form(values))).message, limited); assert.deepEqual(h.checks[0], ["signup:ip:ip", 5, 3600000]); assert.deepEqual(h.hits, ["signup:ip:ip"]);
   const allowed = harness(); await allowed.api.signup(undefined, form(values)); assert.deepEqual(allowed.hits, ["signup:ip:ip"]);
 });
@@ -138,4 +138,19 @@ test("Reservar y registrarse exigen aceptar el aviso de privacidad", async () =>
   assert.equal(booking.errors?.privacy?.[0], "Acepta el aviso de privacidad para reservar.");
   const signup = await h.api.signup(undefined, form({ businessType: "SPA", shopName: "Spa", name: "Ana", email: "ana@test.com", password: "password123", timezone: "America/Bogota", currency: "COP", countryCode: "57" }));
   assert.equal(signup.errors?.privacy?.[0], "Acepta el aviso de privacidad para crear la cuenta.");
+});
+
+test("Registro exige el WhatsApp del dueño", async () => {
+  const h = harness();
+  const values = { businessType: "SPA", shopName: "Spa", name: "Ana", email: "ana@test.com", password: "password123", timezone: "America/Bogota", currency: "COP", countryCode: "57", privacy: "on" };
+  assert.equal((await h.api.signup(undefined, form(values))).errors?.phone?.[0], "Escribe el WhatsApp donde recibirá los avisos de reservas.");
+  assert.equal((await h.api.signup(undefined, form({ ...values, phone: "12" }))).errors?.phone?.[0], "Número no válido.");
+});
+
+test("parseWhatsApp normaliza con el prefijo del país y rechaza vacíos", () => {
+  const { parseWhatsApp } = loadModule("src/lib/format.ts");
+  assert.equal(parseWhatsApp("300 123 4567", "57").phone, "+573001234567");
+  assert.equal(parseWhatsApp("+52 55 1234 5678", "57").phone, "+525512345678");
+  assert.ok(parseWhatsApp("", "57").error);
+  assert.ok(parseWhatsApp(undefined, "57").error);
 });

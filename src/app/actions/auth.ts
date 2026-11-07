@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import * as z from "zod";
 import { db } from "@/lib/db";
 import { createSession, deleteSession } from "@/lib/session";
-import { slugify } from "@/lib/format";
+import { parseWhatsApp, slugify } from "@/lib/format";
 import { getUser } from "@/lib/auth";
 import { BUSINESS_TYPES } from "@/lib/business-types";
 
@@ -40,6 +40,9 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
   if (!Intl.supportedValuesOf("timeZone").includes(data.timezone)) {
     return { errors: { timezone: ["Zona horaria no válida."] } };
   }
+  // El dueño es el primer profesional: ahí recibe los avisos de reservas.
+  const whatsapp = parseWhatsApp(formData.get("phone"), data.countryCode);
+  if ("error" in whatsapp) return { errors: { phone: [whatsapp.error] } };
 
   if ((await consume(`signup:ip:${await clientIp()}`, 5, 60 * 60 * 1000)).limited) return { message: RATE_LIMIT_MESSAGE };
 
@@ -67,7 +70,7 @@ export async function signup(_state: AuthState, formData: FormData): Promise<Aut
               currency: data.currency,
               countryCode: data.countryCode,
               barbers: {
-                create: { name: data.name, workingHours: { create: DEFAULT_HOURS } },
+                create: { name: data.name, phone: whatsapp.phone, workingHours: { create: DEFAULT_HOURS } },
               },
             },
           },

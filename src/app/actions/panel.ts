@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import * as z from "zod";
 import { requireShop } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { BUSINESS_TYPES } from "@/lib/business-types";
 import { BOOKING_RULES, type BookingRule } from "@/lib/booking-rules";
-import { normalizePhone, parsePrice, slugify } from "@/lib/format";
+import { parsePrice, parseWhatsApp, slugify } from "@/lib/format";
 import { hhmmToMinutes, localToUtc } from "@/lib/time";
 
 // Todas las acciones obtienen la barbería de la sesión y filtran por shopId:
@@ -57,9 +58,9 @@ export async function createBarber(_s: FormResult, formData: FormData): Promise<
   const name = z.string().trim().min(2).max(60).safeParse(formData.get("name"));
   if (!name.success) return { errors: { name: ["Escribe un nombre."] } };
 
-  const rawPhone = String(formData.get("phone") ?? "").trim();
-  const phone = rawPhone ? normalizePhone(rawPhone, shop.countryCode) : null;
-  if (rawPhone && !phone) return { errors: { phone: ["Número no válido."] } };
+  const whatsapp = parseWhatsApp(formData.get("phone"), shop.countryCode);
+  if ("error" in whatsapp) return { errors: { phone: [whatsapp.error] } };
+  const phone = whatsapp.phone;
 
   // Copiamos el horario del primer barbero para no empezar de cero.
   const template = await db.barber.findFirst({
@@ -88,15 +89,15 @@ export async function updateBarber(_s: FormResult, formData: FormData): Promise<
   const barber = await db.barber.findFirst({ where: { id, shopId: shop.id } });
   if (!barber) return { error: "Profesional no encontrado." };
 
-  // STAFF solo puede modificar el horario; ignoramos los demás campos recibidos.
-  let profile = {};
+  // El WhatsApp es obligatorio y lo puede cambiar el propio profesional.
+  // STAFF solo puede modificar eso y su horario; ignoramos los demás campos.
+  const whatsapp = parseWhatsApp(formData.get("phone"), shop.countryCode);
+  if ("error" in whatsapp) return { errors: { phone: [whatsapp.error] } };
+  let profile: { phone: string; name?: string; active?: boolean } = { phone: whatsapp.phone };
   if (isOwner) {
     const name = z.string().trim().min(2).max(60).safeParse(formData.get("name"));
     if (!name.success) return { errors: { name: ["Escribe un nombre."] } };
-    const rawPhone = String(formData.get("phone") ?? "").trim();
-    const phone = rawPhone ? normalizePhone(rawPhone, shop.countryCode) : null;
-    if (rawPhone && !phone) return { errors: { phone: ["Número no válido."] } };
-    profile = { name: name.data, active: formData.get("active") === "on", phone };
+    profile = { ...profile, name: name.data, active: formData.get("active") === "on" };
   }
 
   // El formulario envía, por día, una lista de franjas "HH:MM-HH:MM".
@@ -236,4 +237,15 @@ export async function saveSettings(_s: FormResult, formData: FormData): Promise<
   });
   revalidatePath("/panel", "layout");
   return { ok: true };
+}
+
+/** El profesional completa su propio WhatsApp (pantalla obligatoria al entrar). */
+export async function saveMyWhatsApp(_s: FormResult, formData: FormData): Promise<FormResult> {
+  const { shop, barberId } = await requireShop();
+  if (!barberId) return { error: "Tu cuenta no está vinculada a ningún profesional." };
+  const whatsapp = parseWhatsApp(formData.get("phone"), shop.countryCode);
+  if ("error" in whatsapp) return { errors: { phone: [whatsapp.error] } };
+  await db.barber.update({ where: { id: barberId, shopId: shop.id }, data: { phone: whatsapp.phone } });
+  revalidatePath("/panel", "layout");
+  redirect("/panel");
 }

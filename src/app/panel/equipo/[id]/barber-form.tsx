@@ -42,10 +42,10 @@ export function BarberForm({ barber, isOwner }: Props) {
           <input type="checkbox" name="active" defaultChecked={barber.active} className="size-5 accent-[var(--accent-ink)]" />
           Acepta reservas
         </label>
-      </div>
-      <Field label="WhatsApp (opcional)" error={state?.errors?.phone}>
-        <input name="phone" type="tel" autoComplete="tel" defaultValue={barber.phone ?? ""} className={inputClass} aria-invalid={!!state?.errors?.phone} />
-      </Field></>}
+      </div></>}
+      <Field label="WhatsApp" hint="Aquí se reciben los avisos de reservas nuevas y cancelaciones." error={state?.errors?.phone}>
+        <input name="phone" type="tel" required autoComplete="tel" defaultValue={barber.phone ?? ""} className={inputClass} aria-invalid={!!state?.errors?.phone} />
+      </Field>
 
       <fieldset className="grid gap-1">
         <legend className="text-sm font-medium mb-2">Horario semanal</legend>

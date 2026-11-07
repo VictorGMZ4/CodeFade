@@ -27,7 +27,7 @@ function actions(context, db = {}, file = "panel", extra = {}) {
       if (id === "@/lib/auth") return { requireShop: async () => context };
       if (id === "@/lib/db") return { db };
       if (id === "next/cache") return { revalidatePath() {} };
-      if (id === "@/lib/format") return { normalizePhone: () => null, slugify: (value) => value.toLowerCase().replace(/[^a-z0-9-]/g, "") };
+      if (id === "@/lib/format") return { normalizePhone: () => null, parseWhatsApp: loadModule("src/lib/format.ts").parseWhatsApp, slugify: (value) => value.toLowerCase().replace(/[^a-z0-9-]/g, "") };
       if (id === "@/lib/business-types") return loadModule("src/lib/business-types.ts");
       if (id === "@/lib/booking-rules") return loadModule("src/lib/booking-rules.ts");
       if (id === "@/lib/time") return { hhmmToMinutes: (value) => { const [h, m] = value.split(":").map(Number); return h * 60 + m; } };
@@ -37,7 +37,7 @@ function actions(context, db = {}, file = "panel", extra = {}) {
   return exports;
 }
 
-const staff = { shop: { id: "shop" }, user: { id: "staff" }, role: "STAFF", isOwner: false, barberId: "mine" };
+const staff = { shop: { id: "shop", countryCode: "57" }, user: { id: "staff" }, role: "STAFF", isOwner: false, barberId: "mine" };
 const denied = "No tienes permiso para esta acción.";
 
 function formData(values) {
@@ -47,7 +47,7 @@ function formData(values) {
 }
 
 const settings = { name: "Mi negocio", slug: "mi-negocio", slotMinutes: "15", leadTimeMinutes: "60", bookingWindowDays: "15", reminderHours: "24" };
-const registration = { shopName: "Mi negocio", name: "Ana", email: "ana@codefade.test", password: "personal123", timezone: "America/Bogota", currency: "COP", countryCode: "57", privacy: "on" };
+const registration = { shopName: "Mi negocio", name: "Ana", email: "ana@codefade.test", password: "personal123", timezone: "America/Bogota", currency: "COP", countryCode: "57", privacy: "on", phone: "3001234567" };
 
 for (const businessType of ["INVALIDO", "", undefined]) {
   test(`Registro rechaza tipo de negocio ${String(businessType)}`, async () => {
@@ -122,7 +122,7 @@ test("Los cambios de citas STAFF filtran por su barbero y barbería", async () =
   assert.equal(query.where.shopId, "shop");
 });
 
-test("STAFF solo actualiza horario aunque envíe nombre, teléfono y estado", async () => {
+test("STAFF solo actualiza su WhatsApp y su horario aunque envíe nombre y estado", async () => {
   let profile;
   let hours;
   const api = actions(staff, {
@@ -131,9 +131,12 @@ test("STAFF solo actualiza horario aunque envíe nombre, teléfono y estado", as
     $transaction: async () => {},
   });
   const form = new FormData();
-  for (const [key, value] of Object.entries({ id: "mine", name: "Intruso", phone: "inválido", active: "on", "on-1": "on", "start-1": "09:00", "end-1": "12:00" })) form.set(key, value);
+  for (const [key, value] of Object.entries({ id: "mine", name: "Intruso", phone: "300 123 4567", active: "on", "on-1": "on", "start-1": "09:00", "end-1": "12:00" })) form.set(key, value);
   assert.equal((await api.updateBarber(undefined, form)).ok, true);
-  assert.equal(Object.keys(profile).length, 0);
+  assert.deepEqual(Object.keys(profile), ["phone"]);
+  assert.equal(profile.phone, "+573001234567");
+  form.set("phone", "");
+  assert.equal((await api.updateBarber(undefined, form)).errors.phone[0], "Escribe el WhatsApp donde recibirá los avisos de reservas.");
   assert.equal(hours[0].barberId, "mine");
   assert.equal(hours[0].startMin, 540);
   assert.equal(hours[0].endMin, 720);

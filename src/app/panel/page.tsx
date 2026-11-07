@@ -70,8 +70,20 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
 
   const publicUrl = `${process.env.APP_URL ?? ""}/b/${shop.slug}`;
 
+  // Profesionales activos sin WhatsApp: no reciben los avisos de reservas.
+  const withoutWhatsApp = barbers.filter((b) => !b.phone).map((b) => b.name);
+
   return (
     <>
+      {isOwner && withoutWhatsApp.length > 0 && (
+        <div className="mb-4">
+          <Notice>
+            {withoutWhatsApp.length === 1 ? `${withoutWhatsApp[0]} no tiene` : `${withoutWhatsApp.join(", ")} no tienen`} WhatsApp y no
+            recibirá{withoutWhatsApp.length === 1 ? "" : "n"} avisos de sus reservas.{" "}
+            <Link href="/panel/equipo" className="font-semibold underline underline-offset-4">Añádelo en Equipo</Link>
+          </Notice>
+        </div>
+      )}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-4">
         <div>
           <p className="text-sm text-muted">{day === today ? "Hoy" : day === addDaysToDay(today, 1, tz) ? "Mañana" : " "}</p>

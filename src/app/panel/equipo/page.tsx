@@ -49,6 +49,7 @@ async function TeamPageContent() {
                   <p className={b.active ? "font-medium truncate" : "font-medium truncate text-muted"}>
                     {b.name}
                     {!b.active && <span className="ml-2 text-xs font-normal">(inactivo)</span>}
+                    {!b.phone && <span className="ml-2 rounded-full bg-danger-soft text-danger px-2 py-0.5 text-xs font-semibold">Sin WhatsApp</span>}
                   </p>
                   <p className="text-sm text-muted flex gap-1 mt-0.5" aria-label="Días que trabaja">
                     {[1, 2, 3, 4, 5, 6, 0].map((d) => (

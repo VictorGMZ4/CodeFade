@@ -18,8 +18,8 @@ export function NewBarberForm() {
       <Field label="Nombre" error={state?.errors?.name}>
         <input name="name" required className={inputClass} aria-invalid={!!state?.errors?.name} />
       </Field>
-      <Field label="WhatsApp (opcional)" error={state?.errors?.phone}>
-        <input name="phone" type="tel" autoComplete="tel" className={inputClass} aria-invalid={!!state?.errors?.phone} />
+      <Field label="WhatsApp" hint="Aquí recibirá los avisos de reservas." error={state?.errors?.phone}>
+        <input name="phone" type="tel" required autoComplete="tel" className={inputClass} aria-invalid={!!state?.errors?.phone} />
       </Field>
       <Button type="submit" disabled={pending}>
         {pending ? "Añadiendo…" : "Añadir"}

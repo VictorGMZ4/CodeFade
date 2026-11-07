@@ -34,9 +34,14 @@ export const requireShop = cache(async () => {
 
   const barber = await db.barber.findFirst({
     where: { shopId: membership.shopId, userId: user.id },
-    select: { id: true },
+    select: { id: true, phone: true },
   });
-  return { user, shop: membership.shop, role: membership.role, barberId: barber?.id ?? null, isOwner: membership.role === "OWNER" };
+  return {
+    user, shop: membership.shop, role: membership.role, barberId: barber?.id ?? null,
+    // false si el usuario atiende como profesional y aún no tiene WhatsApp.
+    hasWhatsApp: !barber || Boolean(barber.phone),
+    isOwner: membership.role === "OWNER",
+  };
 });
 
 /** Acceso exclusivo del dueño para páginas del panel. */

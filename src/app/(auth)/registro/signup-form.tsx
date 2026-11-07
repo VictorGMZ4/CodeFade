@@ -58,6 +58,17 @@ export function SignupForm({ defaultShopName }: { defaultShopName?: string }) {
       <Field label="Tu nombre" error={e.name}>
         <input name="name" required autoComplete="name" className={inputClass} aria-invalid={!!e.name} />
       </Field>
+      <Field label="Tu WhatsApp" hint="Aquí te avisaremos de cada reserva nueva." error={e.phone}>
+        <input
+          name="phone"
+          type="tel"
+          required
+          autoComplete="tel"
+          placeholder={`+${country.code} …`}
+          className={inputClass}
+          aria-invalid={!!e.phone}
+        />
+      </Field>
       <Field label="País" error={e.timezone}>
         <select value={countryId} onChange={(ev) => setCountryId(ev.target.value)} className={inputClass}>
           {COUNTRIES.map((c) => (

@@ -57,3 +57,14 @@ export function slugify(text: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
 }
+
+/**
+ * WhatsApp obligatorio de un profesional: ahí recibe los avisos de reservas.
+ * Devuelve el número en E.164 o el mensaje de error para el formulario.
+ */
+export function parseWhatsApp(raw: unknown, countryCode: string): { phone: string } | { error: string } {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (!value) return { error: "Escribe el WhatsApp donde recibirá los avisos de reservas." };
+  const phone = normalizePhone(value, countryCode);
+  return phone ? { phone } : { error: "Número no válido." };
+}
