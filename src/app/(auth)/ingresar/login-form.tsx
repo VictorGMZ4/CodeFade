@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { login } from "@/app/actions/auth";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
 
@@ -9,7 +9,11 @@ export function LoginForm() {
   const e = state?.errors ?? {};
 
   return (
-    <form action={action} className="grid gap-4">
+    <form onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }} className="grid gap-4">
       {state?.message && <Notice tone="error">{state.message}</Notice>}
       <Field label="Correo" error={e.email}>
         <input

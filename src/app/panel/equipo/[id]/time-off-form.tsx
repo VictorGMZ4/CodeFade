@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { addTimeOff } from "@/app/actions/panel";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
 
@@ -9,12 +9,24 @@ export function TimeOffForm({ barberId, today }: { barberId: string; today: stri
   const [allDay, setAllDay] = useState(true);
   const formRef = useRef<HTMLFormElement>(null);
 
+  // reset() no toca el estado de React: tras guardar bien, el checkbox controlado
+  // vuelve a su valor inicial durante el render (patrón de React para estado previo).
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state?.ok) setAllDay(true);
+  }
+
   useEffect(() => {
     if (state?.ok) formRef.current?.reset();
   }, [state]);
 
   return (
-    <form ref={formRef} action={action} className="grid gap-3">
+    <form ref={formRef} onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }} className="grid gap-3">
       <input type="hidden" name="barberId" value={barberId} />
       {state?.error && <Notice tone="error">{state.error}</Notice>}
       <div className="grid grid-cols-2 gap-3">

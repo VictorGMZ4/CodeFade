@@ -10,12 +10,17 @@ import { normalizePhone } from "@/lib/format";
 import { isValidDay } from "@/lib/time";
 
 // Acciones públicas: no requieren sesión, así que validan todo lo que llega.
+const IdSchema = z.string().min(1).max(64);
+const AvailabilitySchema = z.object({ slug: IdSchema, serviceId: IdSchema, barberId: IdSchema.nullable() });
 
 async function shopBySlug(slug: string) {
   return db.shop.findUnique({ where: { slug } });
 }
 
 export async function fetchSlots(slug: string, serviceId: string, barberId: string | null, day: string) {
+  if (!AvailabilitySchema.extend({ day: z.string().refine(isValidDay) }).safeParse({ slug, serviceId, barberId, day }).success) return [];
+  const ip = await clientIp();
+  if (ip !== "desconocida" && (await consume(`availability:ip:${ip}`, 120, 5 * 60 * 1000)).limited) return [];
   const shop = await shopBySlug(slug);
   if (!shop || !isValidDay(day)) return [];
   const service = await db.service.findFirst({ where: { id: serviceId, shopId: shop.id, active: true } });
@@ -30,6 +35,9 @@ export async function fetchSlots(slug: string, serviceId: string, barberId: stri
 
 /** Días del rango reservable en los que hay al menos un turno libre. */
 export async function fetchOpenDays(slug: string, serviceId: string, barberId: string | null) {
+  if (!AvailabilitySchema.safeParse({ slug, serviceId, barberId }).success) return [];
+  const ip = await clientIp();
+  if (ip !== "desconocida" && (await consume(`availability:ip:${ip}`, 120, 5 * 60 * 1000)).limited) return [];
   const shop = await shopBySlug(slug);
   if (!shop) return [];
   const service = await db.service.findFirst({ where: { id: serviceId, shopId: shop.id, active: true } });
@@ -55,9 +63,10 @@ const BookingSchema = z.object({
   website: z.string().max(0).optional(),
 });
 
-export type BookingState = { error?: string; errors?: Record<string, string[] | undefined> } | undefined;
+export type BookingState = { error?: string; code?: "SLOT_TAKEN"; errors?: Record<string, string[] | undefined> } | undefined;
 
 export async function book(slug: string, _state: BookingState, formData: FormData): Promise<BookingState> {
+  if (!IdSchema.safeParse(slug).success) return { error: "Este negocio no existe." };
   const shop = await shopBySlug(slug);
   if (!shop) return { error: "Este negocio no existe." };
 
@@ -89,11 +98,9 @@ export async function book(slug: string, _state: BookingState, formData: FormDat
     phone,
     email: data.email || null,
     notes: data.notes || null,
+    privacyAccepted: true,
   });
-  if (!result.ok) return { error: result.error };
-
-  // Prueba de la autorización (Ley 1581): fecha en que aceptó el aviso.
-  await db.customer.updateMany({ where: { shopId: shop.id, phone }, data: { privacyAcceptedAt: new Date() } });
+  if (!result.ok) return { error: result.error, code: result.code };
 
   redirect(`/cita/${result.manageToken}?nueva=1`);
 }

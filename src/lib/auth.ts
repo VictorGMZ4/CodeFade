@@ -34,12 +34,13 @@ export const requireShop = cache(async () => {
 
   const barber = await db.barber.findFirst({
     where: { shopId: membership.shopId, userId: user.id },
-    select: { id: true, phone: true },
+    select: { id: true, phone: true, active: true },
   });
+  const linkedBarber = membership.role === "OWNER" || barber?.active ? barber : null;
   return {
-    user, shop: membership.shop, role: membership.role, barberId: barber?.id ?? null,
+    user, shop: membership.shop, role: membership.role, barberId: linkedBarber?.id ?? null,
     // false si el usuario atiende como profesional y aún no tiene WhatsApp.
-    hasWhatsApp: !barber || Boolean(barber.phone),
+    hasWhatsApp: !linkedBarber || Boolean(linkedBarber.phone),
     isOwner: membership.role === "OWNER",
   };
 });

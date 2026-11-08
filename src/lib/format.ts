@@ -21,8 +21,8 @@ export function formatPrice(cents: number, currency: string) {
   }).format(cents / 100);
 }
 
-/** "25.000" o "25000,50" → 2500000 / 2500050. null si no es un número válido. */
-export function parsePrice(value: string): number | null {
+/** "25.000" o "25000,50" → 2500000 / 2500050. Distingue precios inválidos y demasiado altos. */
+export function parsePrice(value: string): number | null | { error: string } {
   const clean = value.replace(/[^\d.,]/g, "");
   if (!clean) return null;
   // Último separador con 1-2 dígitos detrás = decimales; el resto son miles.
@@ -30,6 +30,7 @@ export function parsePrice(value: string): number | null {
   const integer = (match ? match[1] : clean).replace(/[.,]/g, "");
   const decimals = match ? match[2].padEnd(2, "0") : "00";
   const cents = Number(integer || "0") * 100 + Number(decimals);
+  if (cents > 2_147_483_647) return { error: "Precio demasiado alto." };
   return Number.isSafeInteger(cents) ? cents : null;
 }
 

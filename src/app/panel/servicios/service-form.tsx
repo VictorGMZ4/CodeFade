@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef } from "react";
 import { saveService } from "@/app/actions/panel";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
 
@@ -17,7 +17,11 @@ export function ServiceForm({ service, currency }: { service?: Service; currency
   }, [state, service]);
 
   return (
-    <form ref={formRef} action={action} className="grid gap-3">
+    <form ref={formRef} onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }} className="grid gap-3">
       {service && <input type="hidden" name="id" value={service.id} />}
       {state?.error && <Notice tone="error">{state.error}</Notice>}
       <Field label="Nombre" error={e.name}>

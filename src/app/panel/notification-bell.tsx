@@ -100,7 +100,7 @@ export function NotificationBell() {
           {data.items.map((item) => <li key={item.id} className={cx("mb-1 rounded-xl p-3", !item.read && "bg-accent-soft")}>
             <Link href={`/panel?dia=${item.day}`} onClick={() => { if (!item.read) void mark(item.id); setOpen(false); }} className="block rounded-lg focus-visible:outline-2 focus-visible:outline-accent-ink">
               <div className="flex items-center gap-2 text-sm font-semibold">
-                {!item.read && <span className="h-2 w-2 rounded-full bg-accent-ink" aria-label="Sin leer" />}
+                {!item.read && <><span className="sr-only">Sin leer</span><span className="h-2 w-2 rounded-full bg-accent-ink" aria-hidden="true" /></>}
                 {item.type === "MANUAL_BY_OWNER" ? "Cita agendada por el dueño" : item.type === "NEW_BOOKING" ? "Nueva reserva" : "Cancelación del cliente"}
               </div>
               <p className="mt-1 break-words font-medium">{item.customerName}</p>

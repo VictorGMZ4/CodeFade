@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef } from "react";
 import { createBarber } from "@/app/actions/panel";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
 
@@ -13,7 +13,11 @@ export function NewBarberForm() {
   }, [state]);
 
   return (
-    <form ref={formRef} action={action} className="grid gap-3">
+    <form ref={formRef} onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }} className="grid gap-3">
       {state?.error && <Notice tone="error">{state.error}</Notice>}
       <Field label="Nombre" error={state?.errors?.name}>
         <input name="name" required className={inputClass} aria-invalid={!!state?.errors?.name} />

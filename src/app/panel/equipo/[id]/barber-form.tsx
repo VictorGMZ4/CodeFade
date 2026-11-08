@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { updateBarber } from "@/app/actions/panel";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
 import { WEEKDAYS, minutesToHHMM } from "@/lib/time";
@@ -30,7 +30,11 @@ export function BarberForm({ barber, isOwner }: Props) {
     setWeek((w) => ({ ...w, [d]: fn(w[d]) }));
 
   return (
-    <form action={action} className="grid gap-5">
+    <form onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }} className="grid gap-5">
       <input type="hidden" name="id" value={barber.id} />
       {state?.error && <Notice tone="error">{state.error}</Notice>}
 

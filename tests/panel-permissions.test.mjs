@@ -30,6 +30,7 @@ function actions(context, db = {}, file = "panel", extra = {}) {
       if (id === "@/lib/format") return { normalizePhone: () => null, parseWhatsApp: loadModule("src/lib/format.ts").parseWhatsApp, slugify: (value) => value.toLowerCase().replace(/[^a-z0-9-]/g, "") };
       if (id === "@/lib/business-types") return loadModule("src/lib/business-types.ts");
       if (id === "@/lib/booking-rules") return loadModule("src/lib/booking-rules.ts");
+      if (id === "@/lib/reserved-slugs") return loadModule("src/lib/reserved-slugs.ts");
       if (id === "@/lib/time") return { hhmmToMinutes: (value) => { const [h, m] = value.split(":").map(Number); return h * 60 + m; } };
       return require(id);
     },
@@ -116,7 +117,7 @@ test("STAFF sin vínculo no puede cambiar citas", async () => {
 
 test("Los cambios de citas STAFF filtran por su barbero y barbería", async () => {
   let query;
-  const api = actions(staff, { appointment: { updateMany: async (value) => { query = value; return { count: 1 }; } } });
+  const api = actions(staff, { appointment: { findFirst: async ({ where }) => { assert.equal(where.barberId, "mine"); assert.equal(where.shopId, "shop"); return { status: "BOOKED", startsAt: new Date(0) }; }, updateMany: async (value) => { query = value; return { count: 1 }; } } });
   assert.equal((await api.setAppointmentStatus("cita", "COMPLETED")).ok, true);
   assert.equal(query.where.barberId, "mine");
   assert.equal(query.where.shopId, "shop");

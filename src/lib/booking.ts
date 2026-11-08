@@ -15,6 +15,7 @@ export type BookingInput = {
   phone: string;
   email: string | null;
   notes: string | null;
+  privacyAccepted: true;
 };
 
 /** Máximo de citas futuras activas por teléfono y negocio. */
@@ -23,7 +24,7 @@ export const TOO_MANY_UPCOMING = "Ya tienes varias citas próximas. Escribe al n
 
 export type BookingResult =
   | { ok: true; appointmentId: string; manageToken: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; code?: "SLOT_TAKEN" };
 
 /**
  * Crea una cita validando de nuevo la disponibilidad en el servidor. La
@@ -31,6 +32,7 @@ export type BookingResult =
  * reservas simultáneas del mismo hueco.
  */
 export async function bookAppointment(shop: Shop, input: BookingInput): Promise<BookingResult> {
+  if (input.privacyAccepted !== true) return { ok: false, error: "Acepta el aviso de privacidad para reservar." };
   const service = await db.service.findFirst({
     where: { id: input.serviceId, shopId: shop.id, active: true },
   });
@@ -45,19 +47,12 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
   const day = localDay(input.start, shop.timezone);
   const slots = await getDaySlots(shop, day, service.durationMin, barbers.map((b) => b.id));
   const slot = slots.find((s) => s.start === input.start.toISOString());
-  if (!slot) return { ok: false, error: "Ese horario ya no está disponible. Elige otro." };
+  if (!slot) return { ok: false, code: "SLOT_TAKEN", error: "Ese horario ya no está disponible. Elige otro." };
 
   // Con "cualquier barbero" repartimos: primero quien tenga menos citas ese día.
   const candidates = slot.barberIds.length > 1 ? await byLoad(slot.barberIds, input.start, shop) : slot.barberIds;
 
-  // Quien reserva solo demuestra conocer un teléfono, no ser su dueño: si el
-  // cliente ya existe NO se cambian su nombre ni su correo. El correo escrito
-  // se guarda en la cita y los recordatorios de esta cita van solo ahí.
-  const customer = await db.customer.upsert({
-    where: { shopId_phone: { shopId: shop.id, phone: input.phone } },
-    create: { shopId: shop.id, name: input.name, phone: input.phone, email: input.email },
-    update: {},
-  });
+  const tooManyUpcoming = new Error(TOO_MANY_UPCOMING);
 
   for (const barberId of candidates) {
     try {
@@ -65,10 +60,22 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
         // Serializa las reservas de un mismo teléfono en el negocio para que
         // peticiones simultáneas no superen el máximo de citas activas.
         await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`${shop.id}:${input.phone}`}))::text AS locked`;
+        const now = new Date();
+        // Conocer el teléfono no autoriza a cambiar la identidad ni una prueba
+        // de consentimiento anterior. Todo se revierte si falla la reserva.
+        const customer = await tx.customer.upsert({
+          where: { shopId_phone: { shopId: shop.id, phone: input.phone } },
+          create: { shopId: shop.id, name: input.name, phone: input.phone, email: input.email, privacyAcceptedAt: now },
+          update: {},
+        });
+        await tx.customer.updateMany({
+          where: { id: customer.id, privacyAcceptedAt: null },
+          data: { privacyAcceptedAt: now },
+        });
         const upcoming = await tx.appointment.count({
           where: { shopId: shop.id, customerId: customer.id, status: "BOOKED", startsAt: { gt: new Date() } },
         });
-        if (upcoming >= MAX_UPCOMING_PER_PHONE) return null;
+        if (upcoming >= MAX_UPCOMING_PER_PHONE) throw tooManyUpcoming;
         return tx.appointment.create({
           data: {
             shopId: shop.id,
@@ -84,15 +91,15 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
           },
         });
       });
-      if (!appointment) return { ok: false, error: TOO_MANY_UPCOMING };
       await notifyBarber(appointment, "NEW_BOOKING");
       return { ok: true, appointmentId: appointment.id, manageToken: appointment.manageToken };
     } catch (error) {
+      if (error === tooManyUpcoming) return { ok: false, error: TOO_MANY_UPCOMING };
       if (!isOverlapError(error)) throw error;
       // Alguien reservó este hueco con este barbero hace un instante; probamos el siguiente.
     }
   }
-  return { ok: false, error: "Alguien acaba de reservar ese horario. Elige otro." };
+  return { ok: false, code: "SLOT_TAKEN", error: "Alguien acaba de reservar ese horario. Elige otro." };
 }
 
 async function byLoad(barberIds: string[], start: Date, shop: Shop) {

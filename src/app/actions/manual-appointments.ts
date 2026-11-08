@@ -71,7 +71,7 @@ export async function createManualAppointment(_state: FormResult, formData: Form
       const customer = phone
         ? await tx.customer.upsert({
           where: { shopId_phone: { shopId: shop.id, phone } },
-          create: { shopId: shop.id, name: data.name, phone }, update: { name: data.name },
+          create: { shopId: shop.id, name: data.name, phone }, update: {},
         })
         : await tx.customer.create({ data: { shopId: shop.id, name: data.name, phone: null } });
       return tx.appointment.create({ data: {

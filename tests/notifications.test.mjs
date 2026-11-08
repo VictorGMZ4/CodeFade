@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 function load(file, mocks = {}, globals = {}) {
   const output = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
-  vm.runInNewContext(output, { exports, console: { error() {}, info() {} }, ...globals, require: (id) => id in mocks ? mocks[id] : require(id) });
+  vm.runInNewContext(output, { exports, AbortSignal, console: { error() {}, info() {} }, ...globals, require: (id) => id in mocks ? mocks[id] : require(id) });
   return exports;
 }
 const time = load("src/lib/time.ts");
@@ -108,7 +108,7 @@ test("Un fallo al guardar el aviso no falla la reserva y WhatsApp se difiere", a
     appointment: { create: async () => ({ id: "appointment", shopId: shop.id, barberId: "assigned", manageToken: "token" }), findUnique: async () => ({ startsAt: new Date(), shop, barber: { name: "Andrés", phone: "+573001234567" }, customer: { name: "Cliente" }, service: { name: "Corte" } }) },
     service: { findFirst: async () => ({ id: "service", durationMin: 30, priceCents: 100 }) },
     barber: { findMany: async () => [{ id: "assigned" }] },
-    customer: { upsert: async () => ({ id: "customer" }) },
+    customer: { upsert: async () => ({ id: "customer" }), updateMany: async () => ({ count: 0 }) },
     $queryRaw: async () => [],
   };
   db.appointment.count = async () => 0;
@@ -116,7 +116,7 @@ test("Un fallo al guardar el aviso no falla la reserva y WhatsApp se difiere", a
   const helper = load("src/lib/barber-notifications.ts", { "server-only": {}, "@/lib/db": { db }, "next/server": { after: (fn) => deferred.push(fn) }, "@/lib/notify": { sendBarberNotice: async () => { sent++; } } });
   const start = new Date("2026-11-05T15:00:00Z");
   const api = load("src/lib/booking.ts", { "server-only": {}, "@/lib/db": { db, isOverlapError: () => false }, "@/lib/time": time, "@/lib/availability": { getDaySlots: async () => [{ start: start.toISOString(), barberIds: ["assigned"] }] }, "@/lib/barber-notifications": helper });
-  assert.equal((await api.bookAppointment(shop, { serviceId: "service", barberId: null, start, name: "Cliente", phone: "+573001234567" })).ok, true);
+  assert.equal((await api.bookAppointment(shop, { serviceId: "service", barberId: null, start, name: "Cliente", phone: "+573001234567", privacyAccepted: true })).ok, true);
   assert.equal(sent, 0);
   assert.equal(deferred.length, 1);
   await deferred[0]();
@@ -139,9 +139,10 @@ test("El cron solo consulta y reclama citas ONLINE", async () => {
   let claim;
   let sent = 0;
   const api = load("src/app/api/cron/reminders/route.ts", {
-    "@/lib/db": { db: { appointment: {
+    "@/generated/prisma/client": { Prisma: { sql: require("@prisma/client/runtime/client").sqltag } },
+    "@/lib/db": { db: { $queryRaw: async q => { query = q; return [{ id: "online" }]; }, appointment: {
       findMany: async ({ where }) => {
-        query = where;
+        assert.deepEqual(Array.from(where.id.in), ["online"]);
         return [{ id: "online", startsAt: new Date(Date.now() + 3600000), shop: { reminderHours: 24 }, customer: {}, service: {}, barber: {} }];
       },
       updateMany: async ({ where }) => { claim = where; return { count: 1 }; },
@@ -150,7 +151,7 @@ test("El cron solo consulta y reclama citas ONLINE", async () => {
   }, { process: { env: { CRON_SECRET: "secreto-de-prueba-largo" } }, Buffer, Response, URL });
   const response = await api.GET(new Request("https://example.test/api/cron/reminders", { headers: { authorization: "Bearer secreto-de-prueba-largo" } }));
   assert.equal(response.status, 200);
-  assert.equal(query.source, "ONLINE");
+  assert.match(query.text, /a.source = 'ONLINE'/);
   assert.equal(claim.source, "ONLINE");
   assert.equal(sent, 1);
 });

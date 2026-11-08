@@ -11,8 +11,9 @@ import { createSession, deleteSession } from "@/lib/session";
 import { parseWhatsApp, slugify } from "@/lib/format";
 import { getUser } from "@/lib/auth";
 import { BUSINESS_TYPES } from "@/lib/business-types";
+import { RESERVED_SLUGS } from "@/lib/reserved-slugs";
 
-export type AuthState = { errors?: Record<string, string[] | undefined>; message?: string } | undefined;
+export type AuthState = { errors?: Record<string, string[] | undefined>; message?: string; invalidToken?: boolean } | undefined;
 
 const SignupSchema = z.object({
   businessType: z.enum(BUSINESS_TYPES.map((type) => type.value), { error: "Elige el tipo de negocio." }),
@@ -22,7 +23,7 @@ const SignupSchema = z.object({
   email: z.email({ error: "Correo no válido." }).trim().toLowerCase(),
   password: z.string().min(8, { error: "Mínimo 8 caracteres." }).max(100),
   timezone: z.string().min(3),
-  currency: z.string().length(3),
+  currency: z.string().regex(/^[A-Z]{3}$/, { error: "Moneda no válida." }).refine((currency) => Intl.supportedValuesOf("currency").includes(currency), { error: "Moneda no válida." }),
   countryCode: z.string().regex(/^\d{1,4}$/),
 });
 
@@ -87,6 +88,7 @@ async function uniqueSlug(name: string) {
   const base = slugify(name) || "negocio";
   for (let i = 0; i < 20; i++) {
     const candidate = i === 0 ? base : `${base}-${i + 1}`;
+    if (RESERVED_SLUGS.has(candidate)) continue;
     const taken = await db.shop.findUnique({ where: { slug: candidate }, select: { id: true } });
     if (!taken) return candidate;
   }
@@ -109,11 +111,18 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
   // peticiones simultáneas) y se devuelve si el ingreso es correcto: así solo
   // cuentan los fallos.
   const window = 15 * 60 * 1000;
+  const ip = await clientIp();
   const attempts = await Promise.all([
-    consume(`login:email:${parsed.data.email}`, 5, window),
-    consume(`login:ip:${await clientIp()}`, 20, window),
+    consume(`login:email-ip:${parsed.data.email}:${ip}`, 5, window),
+    consume(`login:email:${parsed.data.email}`, 30, window),
+    consume(`login:ip:${ip}`, 20, window),
   ]);
-  if (attempts.some((a) => a.limited)) return { message: RATE_LIMIT_MESSAGE };
+  if (attempts.some((a) => a.limited)) {
+    // Una solicitud rechazada antes de comparar no cuenta como otro fallo.
+    // Así, insistir desde una IP bloqueada no agota los intentos del correo.
+    await release(...attempts.map((a) => a.id));
+    return { message: RATE_LIMIT_MESSAGE };
+  }
 
   const user = await db.user.findUnique({ where: { email: parsed.data.email } });
   const valid = await bcrypt.compare(parsed.data.password, user?.passwordHash ?? DUMMY_HASH);
@@ -136,6 +145,8 @@ export async function changePassword(_state: AuthState, formData: FormData): Pro
   if (!user) redirect("/ingresar");
   const parsed = PasswordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
+    const attempt = await consume(`password:user:${user.id}`, 5, 15 * 60 * 1000);
+    if (attempt.limited) return { message: RATE_LIMIT_MESSAGE };
   // Quien solo tiene la sesión abierta no puede cambiarla sin la contraseña
   // actual. Excepción: el primer cambio obligatorio de la contraseña temporal.
   if (!user.mustChangePassword) {
@@ -155,6 +166,7 @@ export async function changePassword(_state: AuthState, formData: FormData): Pro
       select: { sessionVersion: true },
     });
   });
+  await release(attempt.id);
   // Cierra las demás sesiones y mantiene abierta la de este dispositivo.
   await createSession(user.id, updated.sessionVersion);
   redirect("/panel");
@@ -200,11 +212,14 @@ export async function requestPasswordReset(_state: AuthState, formData: FormData
 }
 
 export async function resetPassword(token: string, _state: AuthState, formData: FormData): Promise<AuthState> {
+  if (!z.string().min(1).max(64).safeParse(token).success) return { message: RESET_INVALID, invalidToken: true };
   const parsed = PasswordSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors };
+  const attempt = await consume(`reset-password:ip:${await clientIp()}`, 10, 60 * 60 * 1000);
+  if (attempt.limited) return { message: RATE_LIMIT_MESSAGE };
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const reset = await db.passwordResetToken.findUnique({ where: { tokenHash } });
-  if (!reset || reset.usedAt || reset.expiresAt <= new Date()) return { message: RESET_INVALID };
+  if (!reset || reset.usedAt || reset.expiresAt <= new Date()) return { message: RESET_INVALID, invalidToken: true };
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
   const saved = await db.$transaction(async (tx) => {
     // Recomprueba la validez al escribir, incluso tras otro envío durante bcrypt.
@@ -215,6 +230,7 @@ export async function resetPassword(token: string, _state: AuthState, formData: 
     await tx.user.update({ where: { id: reset.userId }, data: { passwordHash, mustChangePassword: false, sessionVersion: { increment: 1 } } });
     return true;
   });
-  if (!saved) return { message: RESET_INVALID };
+  if (!saved) return { message: RESET_INVALID, invalidToken: true };
+  await release(attempt.id);
   redirect("/ingresar?restablecida=1");
 }

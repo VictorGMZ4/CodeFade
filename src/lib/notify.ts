@@ -49,6 +49,7 @@ export async function sendBarberNotice(data: BarberNoticeData): Promise<void> {
   }
   const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
     method: "POST",
+    signal: AbortSignal.timeout(10_000),
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       messaging_product: "whatsapp", to: data.barberPhone.replace("+", ""), type: "template",
@@ -92,29 +93,34 @@ async function sendWhatsApp(data: ReminderData & { customerPhone: string }): Pro
 
   // Los mensajes iniciados por el negocio requieren una plantilla aprobada en Meta.
   // Parámetros esperados: {{1}} nombre, {{2}} barbería, {{3}} día, {{4}} hora, {{5}} enlace.
-  const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to: data.customerPhone.replace("+", ""),
-      type: "template",
-      template: {
-        name: process.env.WHATSAPP_TEMPLATE ?? "recordatorio_cita",
-        language: { code: process.env.WHATSAPP_TEMPLATE_LANG ?? "es" },
-        components: [
-          {
-            type: "body",
-            parameters: [data.customerName, data.shopName, day, time, data.manageUrl].map((text) => ({
-              type: "text",
-              text,
-            })),
-          },
-        ],
-      },
-    }),
-  });
-  return { channel: "whatsapp", ok: res.ok, detail: res.ok ? undefined : await res.text() };
+  try {
+    const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+      method: "POST",
+      signal: AbortSignal.timeout(10_000),
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: data.customerPhone.replace("+", ""),
+        type: "template",
+        template: {
+          name: process.env.WHATSAPP_TEMPLATE ?? "recordatorio_cita",
+          language: { code: process.env.WHATSAPP_TEMPLATE_LANG ?? "es" },
+          components: [
+            {
+              type: "body",
+              parameters: [data.customerName, data.shopName, day, time, data.manageUrl].map((text) => ({
+                type: "text",
+                text,
+              })),
+            },
+          ],
+        },
+      }),
+    });
+    return { channel: "whatsapp", ok: res.ok, detail: res.ok ? undefined : await res.text() };
+  } catch (error) {
+    return { channel: "whatsapp", ok: false, detail: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 async function sendEmail(data: ReminderData): Promise<ChannelResult> {
@@ -141,17 +147,22 @@ async function sendEmail(data: ReminderData): Promise<ChannelResult> {
       <p><a href="${data.manageUrl}">Ver o cancelar la cita</a></p>
     </div>`;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: process.env.EMAIL_FROM,
-      to: data.customerEmail,
-      subject,
-      html,
-    }),
-  });
-  return { channel: "email", ok: res.ok, detail: res.ok ? undefined : await res.text() };
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      signal: AbortSignal.timeout(10_000),
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM,
+        to: data.customerEmail,
+        subject,
+        html,
+      }),
+    });
+    return { channel: "email", ok: res.ok, detail: res.ok ? undefined : await res.text() };
+  } catch (error) {
+    return { channel: "email", ok: false, detail: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function escapeHtml(text: string) {
@@ -172,6 +183,7 @@ export async function sendPasswordReset({ to, name, url }: { to: string; name: s
   }
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: AbortSignal.timeout(10_000),
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: process.env.EMAIL_FROM, to, subject: "Crea una contraseña nueva · AppTuServicio",

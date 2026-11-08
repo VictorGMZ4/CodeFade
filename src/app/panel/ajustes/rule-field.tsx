@@ -5,6 +5,14 @@ import { Field, inputClass } from "@/components/ui";
 
 type Unit = { label: string; factor: number };
 
+/** Cantidad y unidad para mostrar un valor: la unidad más grande que lo divide exacto. */
+function splitValue(value: string, units: Unit[]): { amount: string; unit: Unit } {
+  if (value.trim() === "") return { amount: "", unit: units[0] };
+  const n = Number(value);
+  const unit = [...units].reverse().find((u) => n > 0 && n % u.factor === 0) ?? units[0];
+  return { amount: String(n / unit.factor), unit };
+}
+
 /**
  * Selector de una regla de reserva: valores rápidos y, con "Personalizado",
  * un número libre con su unidad. Envía siempre el valor en la unidad base
@@ -33,12 +41,8 @@ export function RuleField({
 }) {
   const isPreset = presets.some((p) => String(p.value) === value);
   const [custom, setCustom] = useState(!isPreset);
-  // Mostramos el valor personalizado en la unidad más grande que lo divide exacto.
-  const [unit, setUnit] = useState(() => {
-    const n = Number(value);
-    return [...units].reverse().find((u) => n > 0 && n % u.factor === 0) ?? units[0];
-  });
-  const [amount, setAmount] = useState(() => String(Number(value) / unit.factor));
+  const [unit, setUnit] = useState(() => splitValue(value, units).unit);
+  const [amount, setAmount] = useState(() => splitValue(value, units).amount);
 
   const updateCustom = (nextAmount: string, nextUnit: Unit) => {
     setAmount(nextAmount);
@@ -55,7 +59,8 @@ export function RuleField({
         onChange={(ev) => {
           if (ev.target.value === "custom") {
             setCustom(true);
-            updateCustom(amount, unit);
+            const next = splitValue(value, units);
+            updateCustom(next.amount, next.unit);
           } else {
             setCustom(false);
             onChange(ev.target.value);

@@ -68,11 +68,11 @@ test("Teléfono inválido devuelve error de campo sin escribir", async () => {
   assert.equal((await h.api.createManualAppointment(undefined, h.form)).errors.phone[0], "Número no válido.");
   assert.equal(h.calls.appointments.length, 0);
 });
-test("Teléfono válido se normaliza y reutiliza cliente actualizando nombre", async () => {
+test("Teléfono válido se normaliza y reutiliza cliente sin cambiar su nombre", async () => {
   const h = setup(); h.form.set("phone", "300 111 2233"); await save(h);
   assert.equal(h.calls.upsert.where.shopId_phone.phone, "+573001112233");
   assert.equal(h.calls.upsert.where.shopId_phone.shopId, "shop");
-  assert.equal(h.calls.upsert.update.name, "Cliente de paso");
+  assert.equal(Object.keys(h.calls.upsert.update).length, 0);
 });
 for (const owner of [true, false]) test(`Sin aviso al crear en agenda propia (owner=${owner})`, async () => {
   const h = setup({ owner }); await save(h); assert.equal(h.calls.notices.length, 0);

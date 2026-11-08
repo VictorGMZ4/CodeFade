@@ -51,7 +51,7 @@ export function MetricsChart({ title, rows, series, horizontal = false, empty = 
     {series.length >= 2 && <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted mb-3">{series.map(s => <li key={s.label} className="flex items-center gap-2"><span aria-hidden="true" className="size-3 rounded-sm" style={{ background: `var(--series-${s.color})` }} />{s.label}</li>)}</ul>}
     {empty ? <p className="py-10 text-center text-muted">Sin citas en este periodo.</p> : <>
       {!horizontal && width > 320 && <p className="text-sm text-muted mb-2">Desliza para ver todos los intervalos.</p>}
-      <div className="overflow-x-auto" tabIndex={width > 320 ? 0 : undefined} aria-label={width > 320 ? "Gráfico desplazable" : undefined}>
+      <div role="region" className="overflow-x-auto" tabIndex={width > 320 ? 0 : undefined} aria-label={width > 320 ? "Gráfico desplazable" : "Gráfico"}>
         <svg role="group" aria-labelledby={`${id}-title ${id}-desc`} viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minWidth: width > 320 ? width : undefined, maxWidth: width, display: "block", margin: "auto" }}>
           <desc id={`${id}-desc`}>{summary}</desc>
           {!horizontal && scale.ticks.map(t => <g key={t}><line x1="36" x2={width - 6} y1={194 - t / max * 160} y2={194 - t / max * 160} stroke="var(--line)" strokeWidth="1" /><text x="30" y={198 - t / max * 160} textAnchor="end" className="viz-label">{t}</text></g>)}
@@ -68,7 +68,7 @@ export function MetricsChart({ title, rows, series, horizontal = false, empty = 
                 return value > 0 && <path key={s} d={barPath(x, y, horizontal ? extent : 24, horizontal ? 24 : Math.max(0, extent - (s > 0 ? 2 : 0)), horizontal)} fill={`var(--series-${series[s].color})`} />;
               })}
               {horizontal ? row.detail && <text x="0" y={index * 84 + 67} className="viz-label">{row.detail}</text> : <text x={x + 12} y="217" textAnchor="middle" className="viz-label">{row.shortLabel ?? row.label}</text>}
-              <rect x={horizontal ? 0 : 42 + index * cell} y={horizontal ? index * 84 : 24} width={horizontal ? 320 : cell} height={horizontal ? 80 : 206} fill="transparent" tabIndex={0} role="button" aria-label={describe(row)} aria-pressed={selected === index} onPointerEnter={e => { if (e.pointerType !== "touch") setSelected(index); }} onPointerLeave={e => { if (e.pointerType !== "touch") setSelected(null); }} onFocus={() => setSelected(index)} onBlur={() => setSelected(null)} onClick={() => setSelected(selected === index ? null : index)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(selected === index ? null : index); } if (e.key === "Escape") setSelected(null); }} className="viz-target"><title>{describe(row)}</title></rect>
+              <rect x={horizontal ? 0 : 42 + index * cell} y={horizontal ? index * 84 : 24} width={horizontal ? 320 : cell} height={horizontal ? 80 : 206} fill="transparent" tabIndex={0} role="button" aria-label={describe(row)} aria-pressed={selected === index} onPointerEnter={e => { if (e.pointerType !== "touch") setSelected(index); }} onPointerLeave={e => { if (e.pointerType !== "touch") setSelected(null); }} onFocus={() => setSelected(index)} onBlur={() => setSelected(null)} onClick={() => setSelected(selected === index ? null : index)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(selected === index ? null : index); } if (e.key === "Escape") setSelected(null); }} className="viz-target" />
             </g>;
           })}
         </svg>

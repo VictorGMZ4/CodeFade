@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition, type ComponentProps } from "react";
+import { useEffect, useRef, useState, useTransition, type ComponentProps } from "react";
 import { cx } from "@/components/ui";
 
 type Result = { ok: true } | { error: string };
@@ -42,17 +42,34 @@ export function PhotoPicker({
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const previewUrl = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const shown = preview ?? url;
 
+  const replacePreview = (next: string | null) => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = next;
+    setPreview(next);
+  };
+
+  useEffect(() => () => {
+    if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
+    previewUrl.current = null;
+  }, []);
+
   const run = (action: () => Promise<Result>) => {
     setError(null);
     start(async () => {
-      const result = await action();
-      if ("error" in result) setError(result.error);
-      setPreview(null);
-      if (input.current) input.current.value = "";
+      try {
+        const result = await action();
+        if ("error" in result) setError(result.error);
+      } catch {
+        setError("No se pudo guardar la foto. Inténtalo de nuevo.");
+      } finally {
+        replacePreview(null);
+        if (input.current) input.current.value = "";
+      }
     });
   };
 
@@ -83,7 +100,7 @@ export function PhotoPicker({
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                setPreview(URL.createObjectURL(file));
+                replacePreview(URL.createObjectURL(file));
                 const data = new FormData();
                 data.set("photo", file);
                 for (const [k, v] of Object.entries(fields ?? {})) data.set(k, v);

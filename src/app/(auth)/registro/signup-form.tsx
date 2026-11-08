@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
+import { startTransition, useActionState, useState, useSyncExternalStore } from "react";
 import { signup } from "@/app/actions/auth";
 import { BUSINESS_TYPES, businessTypeLabel } from "@/lib/business-types";
 import { Button, Field, Notice, inputClass } from "@/components/ui";
@@ -37,7 +37,11 @@ export function SignupForm({ defaultShopName }: { defaultShopName?: string }) {
   const e = state?.errors ?? {};
 
   return (
-    <form action={action} className="grid gap-4">
+    <form onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }} className="grid gap-4">
       {state?.message && <Notice tone="error">{state.message}</Notice>}
       <Field label="Nombre del negocio" error={e.shopName}>
         <input

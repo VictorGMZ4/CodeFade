@@ -36,6 +36,7 @@ function harness({ missing = false, valid = false, blocked = "" } = {}) {
     "@/lib/session": { createSession: async () => {}, deleteSession: async () => {} },
     "@/lib/format": { slugify: x => x, normalizePhone: x => x, parseWhatsApp: loadModule("src/lib/format.ts").parseWhatsApp },
     "@/lib/business-types": loadModule("src/lib/business-types.ts"),
+    "@/lib/reserved-slugs": loadModule("src/lib/reserved-slugs.ts"),
     "@/lib/rate-limit": { RATE_LIMIT_MESSAGE: limited, clientIp: async () => "ip", consume: async (key, limit, window) => { checks.push([key, limit, window]); hits.push(key); return { limited: key === blocked, id: key }; }, release: async (...ids) => { for (const id of ids) hits.splice(hits.indexOf(id), 1); } },
     "@/lib/notify": { sendPasswordReset: async data => sent.push(data) },
     "next/navigation": { redirect: path => { throw new Error(`REDIRECT:${path}`); } },
@@ -45,11 +46,11 @@ function harness({ missing = false, valid = false, blocked = "" } = {}) {
   return { api: loadModule("src/app/actions/auth.ts", mocks), booking: loadModule("src/app/b/[slug]/actions.ts", mocks), mocks, db, hits, checks, tokens, sent, updates, comparisons };
 }
 const loginForm = () => form({ email: "ana@test.com", password: "incorrecta" });
-for (const blocked of ["login:email:ana@test.com", "login:ip:ip"]) test(`Login bloquea ${blocked} antes de comparar`, async () => {
-  const h = harness({ blocked }); assert.equal((await h.api.login(undefined, loginForm())).message, limited); assert.equal(h.comparisons.length, 0); assert.deepEqual(h.hits, ["login:email:ana@test.com", "login:ip:ip"]);
+for (const blocked of ["login:email-ip:ana@test.com:ip", "login:email:ana@test.com", "login:ip:ip"]) test(`Login bloquea ${blocked} antes de comparar`, async () => {
+  const h = harness({ blocked }); assert.equal((await h.api.login(undefined, loginForm())).message, limited); assert.equal(h.comparisons.length, 0); assert.deepEqual(h.hits, []);
 });
 test("Login solo cuenta fallos y usa hash ficticio para cuentas inexistentes", async () => {
-  for (const missing of [false, true]) { const h = harness({ missing }); await h.api.login(undefined, loginForm()); assert.deepEqual(h.hits, ["login:email:ana@test.com", "login:ip:ip"]); assert.equal(h.comparisons.length, 1); if (missing) assert.notEqual(h.comparisons[0], "stored"); assert.deepEqual(h.checks, [["login:email:ana@test.com", 5, 900000], ["login:ip:ip", 20, 900000]]); }
+  for (const missing of [false, true]) { const h = harness({ missing }); await h.api.login(undefined, loginForm()); assert.deepEqual(h.hits, ["login:email-ip:ana@test.com:ip", "login:email:ana@test.com", "login:ip:ip"]); assert.equal(h.comparisons.length, 1); if (missing) assert.notEqual(h.comparisons[0], "stored"); assert.deepEqual(h.checks, [["login:email-ip:ana@test.com:ip", 5, 900000], ["login:email:ana@test.com", 30, 900000], ["login:ip:ip", 20, 900000]]); }
   const h = harness({ valid: true }); await assert.rejects(h.api.login(undefined, loginForm()), /REDIRECT/); assert.equal(h.hits.length, 0);
 });
 test("Registro limita los envíos válidos por IP", async () => {

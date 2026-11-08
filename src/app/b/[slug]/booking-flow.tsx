@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { startTransition, useActionState, useEffect, useId, useRef, useState, useTransition } from "react";
 import { Img } from "@/components/photo";
 import { buttonClass, cx, Field, inputClass, Notice } from "@/components/ui";
 import { book, fetchOpenDays, fetchSlots, type BookingState } from "./actions";
@@ -35,11 +35,20 @@ export function BookingFlow({
   const [month, setMonth] = useState<string | null>(null); // "yyyy-MM" visible en el calendario
   const [slots, setSlots] = useState<string[] | null>(null);
   const [start, setStart] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [loadingDays, startDays] = useTransition();
   const [loadingSlots, startSlots] = useTransition();
 
   const timeRef = useRef<HTMLElement>(null);
   const detailsRef = useRef<HTMLElement>(null);
+  const slotsRequest = useRef(0);
+  const daysRequest = useRef(0);
+  const serviceTitleId = useId();
+  const barberTitleId = useId();
 
   const service = services.find((s) => s.id === serviceId);
   const barberChosen = barberId !== null;
@@ -47,35 +56,43 @@ export function BookingFlow({
   const [loadError, setLoadError] = useState(false);
 
   const loadSlots = (sId: string, bId: string, d: string) => {
+    const request = ++slotsRequest.current;
     setDay(d);
     setSlots(null);
     setStart(null);
     setLoadError(false);
     startSlots(async () => {
       try {
-        setSlots(await fetchSlots(slug, sId, bId || null, d));
+        const next = await fetchSlots(slug, sId, bId || null, d);
+        if (request === slotsRequest.current) setSlots(next);
       } catch {
-        setLoadError(true);
+        if (request === slotsRequest.current) setLoadError(true);
       }
     });
   };
 
   const fetchDays = async (sId: string, bId: string) => {
+    const request = ++daysRequest.current;
+    const slotsVersion = slotsRequest.current;
     try {
       const open = await fetchOpenDays(slug, sId, bId || null);
+      if (request !== daysRequest.current) return;
       setDays(open);
-      if (open[0]) {
+      if (open[0] && slotsVersion === slotsRequest.current) {
         setMonth(open[0].slice(0, 7));
         loadSlots(sId, bId, open[0]);
       }
     } catch {
-      setLoadError(true);
+      if (request === daysRequest.current) setLoadError(true);
     }
   };
 
   // Al cambiar servicio o barbero, recalculamos qué días tienen hueco y
   // mostramos los horarios del primero.
   const loadDays = (sId: string | null, bId: string | null) => {
+    // Invalida también horarios pendientes del servicio o profesional anterior.
+    daysRequest.current++;
+    slotsRequest.current++;
     setDays(null);
     setDay(null);
     setSlots(null);
@@ -97,8 +114,9 @@ export function BookingFlow({
 
   const [state, action, pending] = useActionState(async (prev: BookingState, formData: FormData) => {
     const result = await book(slug, prev, formData);
+    setBookingError(result?.error ?? null);
     // Si el hueco se acaba de ocupar, refrescamos los horarios de ese día.
-    if (result?.error && serviceId && barberId !== null && day) loadSlots(serviceId, barberId, day);
+    if (result?.code === "SLOT_TAKEN" && serviceId && barberId !== null && day) loadSlots(serviceId, barberId, day);
     return result;
   }, undefined);
 
@@ -135,8 +153,8 @@ export function BookingFlow({
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4 pb-[calc(8rem+env(safe-area-inset-bottom))]">
-      <Step title="Elige un servicio">
-        <div className="grid gap-2">
+      <Step title="Elige un servicio" titleId={serviceTitleId}>
+        <div role="radiogroup" aria-labelledby={serviceTitleId} className="grid gap-2">
           {services.map((s) => (
             <Choice
               key={s.id}
@@ -159,8 +177,8 @@ export function BookingFlow({
       </Step>
 
       {barbers.length > 1 && serviceId && (
-        <Step title="¿Con quién?">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <Step title="¿Con quién?" titleId={barberTitleId}>
+          <div role="radiogroup" aria-labelledby={barberTitleId} className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {[{ id: ANY, name: "El primero libre" }, ...barbers].map((b) => (
               <Choice
                 key={b.id || "any"}
@@ -230,6 +248,7 @@ export function BookingFlow({
                               aria-pressed={start === s}
                               onClick={() => {
                                 setStart(s);
+                                setBookingError(null);
                                 scrollTo(detailsRef);
                               }}
                               className={cx(
@@ -255,7 +274,11 @@ export function BookingFlow({
 
       {start && (
         <Step title="Tus datos" ref={detailsRef}>
-          <form id="booking" action={action} className="grid gap-4 max-w-[520px]">
+          <form id="booking" onSubmit={(ev) => {
+            ev.preventDefault();
+            const data = new FormData(ev.currentTarget);
+            startTransition(() => action(data));
+          }} className="grid gap-4 max-w-[520px]">
             <input type="hidden" name="serviceId" value={serviceId ?? ""} />
             <input type="hidden" name="barberId" value={barberId ?? ""} />
             <input type="hidden" name="start" value={start} />
@@ -265,6 +288,8 @@ export function BookingFlow({
             <Field label="Nombre" error={state?.errors?.name}>
               <input
                 name="name"
+                value={name}
+                onChange={(ev) => setName(ev.target.value)}
                 required
                 autoComplete="name"
                 enterKeyHint="next"
@@ -275,6 +300,8 @@ export function BookingFlow({
             <Field label="WhatsApp" hint="Te enviaremos el recordatorio aquí." error={state?.errors?.phone}>
               <input
                 name="phone"
+                value={phone}
+                onChange={(ev) => setPhone(ev.target.value)}
                 type="tel"
                 required
                 autoComplete="tel"
@@ -287,6 +314,8 @@ export function BookingFlow({
             <Field label="Correo (opcional)" error={state?.errors?.email}>
               <input
                 name="email"
+                value={email}
+                onChange={(ev) => setEmail(ev.target.value)}
                 type="email"
                 autoComplete="email"
                 autoCapitalize="none"
@@ -296,7 +325,7 @@ export function BookingFlow({
               />
             </Field>
             <Field label="¿Algo que debamos saber? (opcional)">
-              <textarea name="notes" rows={2} maxLength={200} className={`${inputClass} h-auto py-2.5 resize-none`} />
+              <textarea name="notes" value={notes} onChange={(ev) => setNotes(ev.target.value)} rows={2} maxLength={200} className={`${inputClass} h-auto py-2.5 resize-none`} />
             </Field>
             <label className="flex items-start gap-3 text-[15px] cursor-pointer">
               <input type="checkbox" name="privacy" required className="mt-1 size-5 shrink-0 accent-[var(--brand)]" aria-invalid={!!state?.errors?.privacy} />
@@ -314,13 +343,13 @@ export function BookingFlow({
       )}
 
       {/* Barra inferior fija con el resumen y el botón de confirmar */}
-      {start && (
+      {(start || bookingError) && (
         <div className="fixed inset-x-0 bottom-0 z-10 bg-surface border-t border-line shadow-card pb-[env(safe-area-inset-bottom)] step-enter">
           <div className="max-w-[1100px] mx-auto px-4 py-3 grid gap-2">
-            {state?.error && <Notice tone="error">{state.error}</Notice>}
+            {bookingError && <Notice tone="error">{bookingError}</Notice>}
             <div className="flex items-center gap-4">
               <p className="flex-1 min-w-0 text-[15px] font-semibold leading-snug first-letter:uppercase">{summary}</p>
-              <button type="submit" form="booking" disabled={pending} className={buttonClass("primary", "px-6")}>
+              <button type="submit" form="booking" disabled={pending || !start} className={buttonClass("primary", "px-6")}>
                 {pending ? "Reservando…" : "Confirmar"}
               </button>
             </div>
@@ -420,10 +449,10 @@ function MonthCalendar({
   );
 }
 
-function Step({ title, children, ref }: { title: string; children: React.ReactNode; ref?: React.Ref<HTMLElement> }) {
+function Step({ title, titleId, children, ref }: { title: string; titleId?: string; children: React.ReactNode; ref?: React.Ref<HTMLElement> }) {
   return (
     <section ref={ref} className="step-enter scroll-mt-4 min-w-0 bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7">
-      <h2 className="font-display text-[20px] mb-4">{title}</h2>
+      <h2 id={titleId} className="font-display text-[20px] mb-4">{title}</h2>
       {children}
     </section>
   );
