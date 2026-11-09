@@ -13,14 +13,22 @@ function localPath(key: string): string {
   return target;
 }
 
+/**
+ * Vercel Blob se autentica con BLOB_READ_WRITE_TOKEN o, en los almacenes
+ * conectados por OIDC, con BLOB_STORE_ID (la librería obtiene sola el token).
+ */
+function hasBlobStore(): boolean {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
+}
+
 export async function savePublicImage(key: string, data: Buffer, contentType: "image/webp"): Promise<string> {
   const target = localPath(key);
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  if (hasBlobStore()) {
     const blob = await put(key, data, { access: "public", addRandomSuffix: true, contentType });
     return blob.url;
   }
   if (process.env.NODE_ENV === "production" && process.env.ALLOW_LOCAL_UPLOADS !== "1") {
-    throw new Error("Configura BLOB_READ_WRITE_TOKEN para subir fotos en producción (o ALLOW_LOCAL_UPLOADS=1 para pruebas locales).");
+    throw new Error("Conecta un almacén de Vercel Blob (BLOB_STORE_ID o BLOB_READ_WRITE_TOKEN) para subir fotos en producción (o ALLOW_LOCAL_UPLOADS=1 para pruebas locales).");
   }
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, data, { flag: "wx" });
@@ -36,7 +44,7 @@ export async function deletePublicImage(url: string): Promise<void> {
       const relative = path.relative(root, await realpath(target));
       if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) return;
       await unlink(target);
-    } else if (process.env.BLOB_READ_WRITE_TOKEN) {
+    } else if (hasBlobStore()) {
       await del(url);
     }
   } catch (error) {
