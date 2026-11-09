@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, type ComponentProps } from "react";
 import { cx } from "@/components/ui";
+import { isShrinkImageError, shrinkImage } from "@/components/shrink-image";
 
 type Result = { ok: true } | { error: string };
 
@@ -64,8 +65,8 @@ export function PhotoPicker({
       try {
         const result = await action();
         if ("error" in result) setError(result.error);
-      } catch {
-        setError("No se pudo guardar la foto. Inténtalo de nuevo.");
+      } catch (error) {
+        setError(isShrinkImageError(error) ? error.message : "No se pudo guardar la foto. Inténtalo de nuevo.");
       } finally {
         replacePreview(null);
         if (input.current) input.current.value = "";
@@ -101,10 +102,13 @@ export function PhotoPicker({
                 const file = e.target.files?.[0];
                 if (!file) return;
                 replacePreview(URL.createObjectURL(file));
-                const data = new FormData();
-                data.set("photo", file);
-                for (const [k, v] of Object.entries(fields ?? {})) data.set(k, v);
-                run(() => upload(data));
+                run(async () => {
+                  const photo = await shrinkImage(file);
+                  const data = new FormData();
+                  data.set("photo", photo);
+                  for (const [k, v] of Object.entries(fields ?? {})) data.set(k, v);
+                  return upload(data);
+                });
               }}
             />
           </label>

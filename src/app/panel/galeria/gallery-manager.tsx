@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { addGalleryPhoto, deleteGalleryPhoto } from "@/app/actions/photos";
 import { Img } from "@/components/photo";
 import { cx } from "@/components/ui";
+import { isShrinkImageError, shrinkImage } from "@/components/shrink-image";
 
 type Photo = { id: string; url: string; author: string | null; canDelete: boolean };
 
@@ -18,10 +19,15 @@ export function GalleryManager({ photos, max }: { photos: Photo[]; max: number }
     setError(null);
     setBusy(key);
     start(async () => {
-      const result = await action();
-      if ("error" in result) setError(result.error);
-      setBusy(null);
-      if (input.current) input.current.value = "";
+      try {
+        const result = await action();
+        if ("error" in result) setError(result.error);
+      } catch (error) {
+        setError(isShrinkImageError(error) ? error.message : "No se pudo guardar la foto. Inténtalo de nuevo.");
+      } finally {
+        setBusy(null);
+        if (input.current) input.current.value = "";
+      }
     });
   };
 
@@ -47,7 +53,7 @@ export function GalleryManager({ photos, max }: { photos: Photo[]; max: number }
                   +
                 </span>
                 <span className="block font-semibold mt-2">{busy === "add" ? "Subiendo…" : "Añadir foto"}</span>
-                <span className="block text-[13px] opacity-80 mt-0.5">JPG, PNG o WebP · máx. 8 MB</span>
+                <span className="block text-[13px] opacity-80 mt-0.5">JPG, PNG o WebP · máx. 25 MB</span>
               </span>
               <input
                 ref={input}
@@ -58,9 +64,12 @@ export function GalleryManager({ photos, max }: { photos: Photo[]; max: number }
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
-                  const data = new FormData();
-                  data.set("photo", file);
-                  run("add", () => addGalleryPhoto(data));
+                  run("add", async () => {
+                    const photo = await shrinkImage(file);
+                    const data = new FormData();
+                    data.set("photo", photo);
+                    return addGalleryPhoto(data);
+                  });
                 }}
               />
             </label>
