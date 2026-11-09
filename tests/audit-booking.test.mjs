@@ -30,6 +30,7 @@ test("IP desconocida no comparte contador de disponibilidad", async () => {
 
 test("Cancelación repetida es idempotente sin repetir avisos", async () => {
   const api = load("src/app/cita/[token]/actions.ts", {
+    "@/lib/availability": {}, "@/lib/reschedule": {}, "@/lib/rate-limit": {}, "@/lib/time": {},
     "next/cache": { revalidatePath() {} },
     "@/lib/barber-notifications": { notifyBarber: async () => assert.fail("Aviso duplicado") },
     "@/lib/db": { db: { appointment: { updateMany: async () => ({ count: 0 }), findUnique: async () => ({ status: "CANCELLED", startsAt: new Date(Date.now() + 3600000) }) } } },
@@ -151,6 +152,7 @@ test("Cron continúa tras excepción de envío y revierte la marca", async () =>
 test("Cancelar devuelve error controlado y solo revalida cuando cancela", async () => {
   let writes = 0, revalidations = 0, count = 0;
   const api = load("src/app/cita/[token]/actions.ts", {
+    "@/lib/availability": {}, "@/lib/reschedule": {}, "@/lib/rate-limit": {}, "@/lib/time": {},
     "next/cache": { revalidatePath: () => revalidations++ },
     "@/lib/barber-notifications": { notifyBarber: async () => {} },
     "@/lib/db": { db: { appointment: { updateMany: async () => { writes++; return { count }; }, findUnique: async () => null } } },

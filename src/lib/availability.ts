@@ -22,7 +22,7 @@ export const MAX_SERVICE_MINUTES = 480;
 /** Duración máxima de una ausencia (igual que la validación de ausencias del panel). */
 export const MAX_TIME_OFF_DAYS = 366;
 
-export type SlotOptions = { ignoreLeadTime?: boolean; windowDays?: number };
+export type SlotOptions = { ignoreLeadTime?: boolean; windowDays?: number; excludeAppointmentId?: string };
 
 /** Primer y último día local reservables según las reglas de la barbería. */
 export function bookableRange(shop: ShopRules, now = new Date()) {
@@ -68,6 +68,7 @@ export async function getSlots(
       where: {
         barberId: { in: barberIds },
         status: "BOOKED",
+        ...(options.excludeAppointmentId ? { id: { not: options.excludeAppointmentId } } : {}),
         // Ninguna cita dura más que el servicio más largo permitido: con esta
         // cota el índice (barberId, startsAt) no recorre todo el historial.
         startsAt: { gte: new Date(rangeStart.getTime() - MAX_SERVICE_MINUTES * 60_000), lt: rangeEnd },

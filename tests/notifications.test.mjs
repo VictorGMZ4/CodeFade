@@ -78,6 +78,7 @@ test("El aviso se guarda sin cuenta vinculada y el fallo de WhatsApp queda conte
     "@/lib/notify": { sendBarberNotice: async () => { throw new Error("red caída"); } },
     "@/lib/db": { db: {
       notification: { create: async ({ data }) => { saved = data; } },
+      barber: { findUnique: async () => ({ phone: "+573001234567", name: "Andrés" }) },
       appointment: { findUnique: async () => ({ barber: { phone: "+573001234567", name: "Andrés", userId: null }, customer: { name: "Cliente" }, service: { name: "Corte" }, shop, startsAt: new Date() }) },
     } },
   });
@@ -91,6 +92,7 @@ for (const count of [0, 1]) {
   test(`Cancelar crea aviso solo si cambió una cita: count=${count}`, async () => {
     let notices = 0;
     const api = load("src/app/cita/[token]/actions.ts", {
+      "@/lib/availability": {}, "@/lib/reschedule": {}, "@/lib/rate-limit": {}, "@/lib/time": {},
       "next/cache": { revalidatePath() {} },
       "@/lib/db": { db: { appointment: { updateMany: async () => ({ count }), findUnique: async () => ({ id: "appointment", shopId: "shop", barberId: "mine" }) } } },
       "@/lib/barber-notifications": { notifyBarber: async () => { notices++; } },
@@ -107,7 +109,7 @@ test("Un fallo al guardar el aviso no falla la reserva y WhatsApp se difiere", a
     notification: { create: async () => { throw new Error("BD de avisos no disponible"); } },
     appointment: { create: async () => ({ id: "appointment", shopId: shop.id, barberId: "assigned", manageToken: "token" }), findUnique: async () => ({ startsAt: new Date(), shop, barber: { name: "Andrés", phone: "+573001234567" }, customer: { name: "Cliente" }, service: { name: "Corte" } }) },
     service: { findFirst: async () => ({ id: "service", durationMin: 30, priceCents: 100 }) },
-    barber: { findMany: async () => [{ id: "assigned" }] },
+    barber: { findMany: async () => [{ id: "assigned" }], findUnique: async () => ({ phone: "+573001234567", name: "Andrés" }) },
     customer: { upsert: async () => ({ id: "customer" }), updateMany: async () => ({ count: 0 }) },
     $queryRaw: async () => [],
   };

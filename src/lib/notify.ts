@@ -27,9 +27,10 @@ export type ReminderData = {
 type ChannelResult = { channel: "email" | "whatsapp"; ok: boolean; detail?: string };
 
 export type BarberNoticeData = {
-  type: "NEW_BOOKING" | "CLIENT_CANCELLED" | "MANUAL_BY_OWNER";
+  type: "NEW_BOOKING" | "CLIENT_CANCELLED" | "MANUAL_BY_OWNER" | "CLIENT_RESCHEDULED";
   barberName: string;
   barberPhone: string;
+  previousStartsAt?: Date;
   customerName: string;
   serviceName: string;
   startsAt: Date;
@@ -42,9 +43,16 @@ export async function sendBarberNotice(data: BarberNoticeData): Promise<void> {
   const day = formatDayLong(data.startsAt, data.timezone);
   const time = formatTime(data.startsAt, data.timezone);
   const isNew = data.type === "NEW_BOOKING" || data.type === "MANUAL_BY_OWNER";
+  const changed = data.type === "CLIENT_RESCHEDULED";
+  if (changed && !data.previousStartsAt) throw new Error("Falta la hora anterior de la cita.");
+  const previous = data.previousStartsAt
+    ? [formatDayLong(data.previousStartsAt, data.timezone), formatTime(data.previousStartsAt, data.timezone)] : [];
+  const template = changed ? (process.env.WHATSAPP_TEMPLATE_BARBER_RESCHEDULE ?? "aviso_reprogramacion_barbero")
+    : isNew ? (process.env.WHATSAPP_TEMPLATE_BARBER_NEW ?? "aviso_reserva_barbero")
+    : (process.env.WHATSAPP_TEMPLATE_BARBER_CANCEL ?? "aviso_cancelacion_barbero");
   if (!token || !phoneId) {
     if (!simulate) return missing("aviso:whatsapp");
-    console.info(`[aviso:whatsapp] ${data.barberPhone}: Hola ${data.barberName}, ${isNew ? "nueva reserva" : "cancelación del cliente"}: ${data.customerName}, ${data.serviceName}, ${day} a las ${time}.`);
+    console.info(`[aviso:whatsapp] ${data.barberPhone}: Hola ${data.barberName}, ${changed ? `cita reprogramada (antes: ${previous.join(" a las ")})` : isNew ? "nueva reserva" : "cancelación del cliente"}: ${data.customerName}, ${data.serviceName}, ${day} a las ${time}.`);
     return;
   }
   const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
@@ -54,9 +62,9 @@ export async function sendBarberNotice(data: BarberNoticeData): Promise<void> {
     body: JSON.stringify({
       messaging_product: "whatsapp", to: data.barberPhone.replace("+", ""), type: "template",
       template: {
-        name: isNew ? (process.env.WHATSAPP_TEMPLATE_BARBER_NEW ?? "aviso_reserva_barbero") : (process.env.WHATSAPP_TEMPLATE_BARBER_CANCEL ?? "aviso_cancelacion_barbero"),
+        name: template,
         language: { code: process.env.WHATSAPP_TEMPLATE_LANG ?? "es" },
-        components: [{ type: "body", parameters: [data.barberName, data.customerName, data.serviceName, day, time].map((text) => ({ type: "text", text })) }],
+        components: [{ type: "body", parameters: [data.barberName, data.customerName, data.serviceName, ...(changed ? previous : []), day, time].map((text) => ({ type: "text", text })) }],
       },
     }),
   });

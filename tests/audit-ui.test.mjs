@@ -30,6 +30,7 @@ function harness(actions, props, file = "src/app/b/[slug]/booking-flow.tsx", com
   vm.runInNewContext(source, { exports, Intl, requestAnimationFrame: fn => fn(), FormData: class { constructor(form) { this.values = form.values; } }, require: id => {
     if (id === "react") return react;
     if (id === "react/jsx-runtime") return { jsx, jsxs: jsx };
+    if (id === "./month-calendar") return { MonthCalendar: function MonthCalendar() {}, SkeletonGrid: function SkeletonGrid() {} };
     if (id === "./actions") return actions;
     if (id.startsWith("@/app/actions/")) return actions;
     return new Proxy({}, { get: (_, key) => key === "cx" || key === "buttonClass" ? () => "" : key });

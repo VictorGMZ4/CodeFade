@@ -45,7 +45,8 @@ export async function GET(request: Request) {
     try {
       // Marcamos antes de enviar: si dos crons coinciden, solo uno gana la fila.
       const claimed = await db.appointment.updateMany({
-        where: { id: a.id, reminderSentAt: null, status: "BOOKED", source: "ONLINE" },
+        where: { id: a.id, reminderSentAt: null, status: "BOOKED", source: "ONLINE",
+          startsAt: a.startsAt, rescheduleCount: a.rescheduleCount },
         data: { reminderSentAt: now },
       });
       if (claimed.count === 0) continue;

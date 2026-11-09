@@ -7,6 +7,8 @@ import { Card, Notice, buttonClass } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
 import { formatDayLong, formatTime } from "@/lib/time";
+import { ExpiredLink } from "./expired-link";
+import { canReschedule, RESCHEDULE_REASONS } from "@/lib/reschedule";
 import { CancelButton } from "./cancel-button";
 
 export const metadata: Metadata = {
@@ -25,7 +27,7 @@ export default function AppointmentPage(props: PageProps<"/cita/[token]">) {
 
 async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita/[token]">) {
   const { token } = await params;
-  const { nueva } = await searchParams;
+  const { nueva, cambiada } = await searchParams;
   const a = await db.appointment.findUnique({
     where: { manageToken: token },
     include: { shop: true, service: true, barber: true, customer: { select: { name: true } } },
@@ -36,6 +38,7 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
   // ese momento no se muestra ningún dato de la reserva.
   if (a.endsAt <= new Date()) return <ExpiredLink slug={a.shop.slug} />;
 
+  const allowed = canReschedule(a, a.shop, new Date());
   const tz = a.shop.timezone;
   const upcoming = a.status === "BOOKED" && a.startsAt > new Date();
   const calendarUrl = googleCalendarUrl({
@@ -63,6 +66,8 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
           <Notice tone="error">Esta cita está cancelada.</Notice>
         </div>
       )}
+
+      {cambiada === "1" && a.status === "BOOKED" && <div className="mb-4"><Notice tone="ok">Tu cita se cambió. Te enviaremos el recordatorio con la nueva hora.</Notice></div>}
 
       <Card className="p-5 grid gap-4">
         <div>
@@ -101,32 +106,18 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
           <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className={buttonClass("secondary", "h-12")}>
             Añadir a Google Calendar
           </a>
+          {allowed.ok ? <Link href={`/cita/${token}/reprogramar`} className={buttonClass("secondary")}>Cambiar fecha u hora</Link>
+            : <p className="text-sm text-muted">{RESCHEDULE_REASONS[allowed.reason]}</p>}
           <CancelButton token={token} />
         </div>
       )}
 
       <p className="text-sm text-muted text-center mt-8">
-        Guarda este enlace para ver o cancelar tu cita.{" "}
+        Guarda este enlace para ver, cambiar o cancelar tu cita.{" "}
         <Link href={`/b/${a.shop.slug}`} className="text-ink underline underline-offset-4">
           Reservar otra
         </Link>
       </p>
-    </main>
-  );
-}
-
-function ExpiredLink({ slug }: { slug: string }) {
-  return (
-    <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-12">
-      <Card className="p-6 sm:p-8">
-        <h1 className="font-display text-[28px] leading-tight tracking-tight">Este enlace ya caducó</h1>
-        <p className="text-muted mt-2">
-          La cita ya terminó, así que sus datos ya no están disponibles aquí. Si quieres volver, puedes reservar otra.
-        </p>
-        <Link href={`/b/${slug}`} className={buttonClass("primary", "mt-6 w-full sm:w-auto")}>
-          Reservar otra cita
-        </Link>
-      </Card>
     </main>
   );
 }

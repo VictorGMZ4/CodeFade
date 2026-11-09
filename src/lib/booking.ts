@@ -102,7 +102,7 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
   return { ok: false, code: "SLOT_TAKEN", error: "Alguien acaba de reservar ese horario. Elige otro." };
 }
 
-async function byLoad(barberIds: string[], start: Date, shop: Shop) {
+export async function byLoad(barberIds: string[], start: Date, shop: Shop) {
   const day = localDay(start, shop.timezone);
   const counts = await db.appointment.groupBy({
     by: ["barberId"],

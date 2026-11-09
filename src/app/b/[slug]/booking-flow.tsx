@@ -5,11 +5,13 @@ import { Img } from "@/components/photo";
 import { buttonClass, cx, Field, inputClass, Notice } from "@/components/ui";
 import { book, fetchOpenDays, fetchSlots, type BookingState } from "./actions";
 
+import { MonthCalendar, SkeletonGrid } from "./month-calendar";
+
 type Service = { id: string; name: string; duration: string; price: string };
 type Barber = { id: string; name: string; photoUrl?: string | null };
 
 const ANY = "";
-const WEEK_LABELS = ["L", "M", "X", "J", "V", "S", "D"];
+
 
 export function BookingFlow({
   slug,
@@ -367,94 +369,6 @@ export function BookingFlow({
 }
 
 /** Calendario mensual: los días con hueco se pueden elegir, el resto se ven apagados. */
-function MonthCalendar({
-  month,
-  openDays,
-  selected,
-  onMonth,
-  onSelect,
-  label,
-}: {
-  month: string;
-  openDays: string[];
-  selected: string | null;
-  onMonth: (m: string) => void;
-  onSelect: (d: string) => void;
-  label: (d: string) => string;
-}) {
-  const open = new Set(openDays);
-  const months = [...new Set(openDays.map((d) => d.slice(0, 7)))].sort();
-  const index = months.indexOf(month);
-  const [y, m] = month.split("-").map(Number);
-  const first = new Date(Date.UTC(y, m - 1, 1));
-  const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  const offset = (first.getUTCDay() + 6) % 7; // lunes primero
-  const title = new Intl.DateTimeFormat("es", { month: "long", year: "numeric", timeZone: "UTC" }).format(first);
-  const pad = (n: number) => String(n).padStart(2, "0");
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <p className="font-semibold first-letter:uppercase">{title}</p>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => onMonth(months[index - 1])}
-            disabled={index <= 0}
-            aria-label="Mes anterior"
-            className="press size-10 rounded-full grid place-items-center text-accent-ink hover:bg-accent-soft disabled:opacity-30 disabled:pointer-events-none"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            onClick={() => onMonth(months[index + 1])}
-            disabled={index >= months.length - 1}
-            aria-label="Mes siguiente"
-            className="press size-10 rounded-full grid place-items-center text-accent-ink hover:bg-accent-soft disabled:opacity-30 disabled:pointer-events-none"
-          >
-            ›
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-7 gap-1 text-center">
-        {WEEK_LABELS.map((d) => (
-          <span key={d} className="text-[13px] font-semibold text-muted py-1">
-            {d}
-          </span>
-        ))}
-        {Array.from({ length: offset }, (_, i) => (
-          <span key={`e${i}`} />
-        ))}
-        {Array.from({ length: daysInMonth }, (_, i) => {
-          const d = `${month}-${pad(i + 1)}`;
-          const available = open.has(d);
-          const isSelected = d === selected;
-          return available ? (
-            <button
-              key={d}
-              type="button"
-              onClick={() => onSelect(d)}
-              aria-pressed={isSelected}
-              aria-label={label(d)}
-              className={cx(
-                "press aspect-square max-h-12 w-full mx-auto rounded-full grid place-items-center text-[16px] font-bold tabular-nums",
-                isSelected ? "bg-brand text-brand-ink" : "bg-accent-soft text-accent-ink hover:bg-accent",
-              )}
-            >
-              {i + 1}
-            </button>
-          ) : (
-            <span key={d} className="aspect-square max-h-12 grid place-items-center text-[15px] text-muted/60 tabular-nums">
-              {i + 1}
-            </span>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function Step({ title, titleId, children, ref }: { title: string; titleId?: string; children: React.ReactNode; ref?: React.Ref<HTMLElement> }) {
   return (
     <section ref={ref} className="step-enter scroll-mt-4 min-w-0 bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7">
@@ -489,15 +403,5 @@ function Choice({
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />
       {children}
     </label>
-  );
-}
-
-function SkeletonGrid({ count, cols = "grid-cols-7" }: { count: number; cols?: string }) {
-  return (
-    <div className={cx("grid gap-2", cols)} role="status" aria-label="Cargando">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="h-11 rounded-lg bg-raised animate-pulse" />
-      ))}
-    </div>
   );
 }

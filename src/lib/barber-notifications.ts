@@ -5,10 +5,17 @@ import { sendBarberNotice } from "@/lib/notify";
 import type { NotificationType } from "@/generated/prisma/client";
 
 /** Se ejecuta después de confirmar la cita, fuera de su transacción. */
-export async function notifyBarber(appointment: { id: string; shopId: string; barberId: string }, type: NotificationType) {
+export async function notifyBarber(
+  appointment: { id: string; shopId: string; barberId: string; startsAt?: Date }, type: NotificationType,
+  options: { barberId?: string; previousStartsAt?: Date } = {},
+) {
+  const barberId = options.barberId ?? appointment.barberId;
+  // La cancelación por cambio de profesional se refiere a la hora anterior.
+  const noticeStartsAt = type === "CLIENT_CANCELLED" && options.previousStartsAt ? options.previousStartsAt : appointment.startsAt;
   try {
     await db.notification.create({ data: {
-      shopId: appointment.shopId, barberId: appointment.barberId, appointmentId: appointment.id, type,
+      shopId: appointment.shopId, barberId, appointmentId: appointment.id, type,
+      previousStartsAt: options.previousStartsAt, startsAt: noticeStartsAt,
     } });
   } catch (error) {
     console.error("[avisos] No se pudo guardar el aviso", error);
@@ -20,13 +27,16 @@ export async function notifyBarber(appointment: { id: string; shopId: string; ba
       try {
         const data = await db.appointment.findUnique({
           where: { id: appointment.id },
-          include: { barber: true, customer: true, service: true, shop: true },
+          include: { customer: true, service: true, shop: true },
         });
-        if (!data?.barber.phone || data.shop.isDemo) return;
+        if (!data || data.shop.isDemo) return;
+        const barber = await db.barber.findUnique({ where: { id: barberId } });
+        if (!barber?.phone) return;
         await sendBarberNotice({
-          type, barberName: data.barber.name, barberPhone: data.barber.phone,
+          type, barberName: barber.name, barberPhone: barber.phone,
           customerName: data.customer.name, serviceName: data.service.name,
-          startsAt: data.startsAt, timezone: data.shop.timezone,
+          startsAt: noticeStartsAt ?? data.startsAt,
+          previousStartsAt: options.previousStartsAt, timezone: data.shop.timezone,
         });
       } catch (error) {
         console.error("[avisos] No se pudo enviar WhatsApp", error);

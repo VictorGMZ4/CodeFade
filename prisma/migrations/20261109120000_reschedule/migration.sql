@@ -1,0 +1,3 @@
+ALTER TYPE "NotificationType" ADD VALUE 'CLIENT_RESCHEDULED';
+ALTER TABLE "Appointment" ADD COLUMN "rescheduleCount" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "Notification" ADD COLUMN "previousStartsAt" TIMESTAMP(3);

@@ -101,11 +101,12 @@ export function NotificationBell() {
             <Link href={`/panel?dia=${item.day}`} onClick={() => { if (!item.read) void mark(item.id); setOpen(false); }} className="block rounded-lg focus-visible:outline-2 focus-visible:outline-accent-ink">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 {!item.read && <><span className="sr-only">Sin leer</span><span className="h-2 w-2 rounded-full bg-accent-ink" aria-hidden="true" /></>}
-                {item.type === "MANUAL_BY_OWNER" ? "Cita agendada por el dueño" : item.type === "NEW_BOOKING" ? "Nueva reserva" : "Cancelación del cliente"}
+                {item.type === "CLIENT_RESCHEDULED" ? "Cita reprogramada" : item.type === "MANUAL_BY_OWNER" ? "Cita agendada por el dueño" : item.type === "NEW_BOOKING" ? "Nueva reserva" : "Cancelación del cliente"}
               </div>
               <p className="mt-1 break-words font-medium">{item.customerName}</p>
               <p className="break-words text-sm text-muted">{item.serviceName}</p>
               <p className="mt-1 text-sm">{item.appointmentDay} · {item.appointmentTime}</p>
+              {item.type === "CLIENT_RESCHEDULED" && <p className="mt-1 text-sm text-muted">Antes: {item.previousDay} · {item.previousTime}</p>}
               <p className="mt-1 text-xs text-muted">{elapsed(item.createdAt, now)}</p>
             </Link>
             {!item.read && <button type="button" disabled={busy} onClick={() => void mark(item.id)} className="press mt-1 min-h-11 text-sm font-medium text-accent-ink disabled:opacity-50">Marcar como leído</button>}

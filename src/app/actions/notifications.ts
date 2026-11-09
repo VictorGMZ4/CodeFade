@@ -13,14 +13,23 @@ export async function getNotifications() {
     where, take: 20, orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: { appointment: { include: { customer: true, service: true } } },
   });
-  return { unread, items: notices.map((notice) => ({
-    id: notice.id, type: notice.type, read: notice.readAt !== null,
-    createdAt: notice.createdAt.toISOString(),
-    customerName: notice.appointment.customer.name, serviceName: notice.appointment.service.name,
-    appointmentDay: formatDayLong(notice.appointment.startsAt, shop.timezone),
-    appointmentTime: formatTime(notice.appointment.startsAt, shop.timezone),
-    day: localDay(notice.appointment.startsAt, shop.timezone),
-  })) };
+  return { unread, items: notices.map((notice) => {
+    // Avisos anteriores a esta columna: se usa la hora actual de la cita.
+    const startsAt = notice.startsAt ?? (notice.type === "CLIENT_CANCELLED" && notice.previousStartsAt
+      ? notice.previousStartsAt : notice.appointment.startsAt);
+    const previousDay = notice.previousStartsAt ? formatDayLong(notice.previousStartsAt, shop.timezone) : null;
+    const previousTime = notice.previousStartsAt ? formatTime(notice.previousStartsAt, shop.timezone) : null;
+    return {
+      id: notice.id, type: notice.type, read: notice.readAt !== null,
+      createdAt: notice.createdAt.toISOString(),
+      customerName: notice.appointment.customer.name, serviceName: notice.appointment.service.name,
+      appointmentDay: formatDayLong(startsAt, shop.timezone),
+      appointmentTime: formatTime(startsAt, shop.timezone),
+      day: localDay(startsAt, shop.timezone),
+      previousStartsAt: notice.previousStartsAt ? { day: previousDay, time: previousTime } : null,
+      previousDay, previousTime,
+    };
+  }) };
 }
 
 export async function markNotificationRead(id: string) {
