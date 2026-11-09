@@ -29,6 +29,7 @@ function setup({ owner = false, own = "mine", slots = true, overlap = false, not
   };
   db.$transaction = async (fn) => fn(db);
   const api = load("src/app/actions/manual-appointments.ts", {
+    "@/lib/search-text": load("src/lib/search-text.ts"),
     "@/lib/auth": { requireShop: async () => ({ shop: { id: "shop", timezone: "America/Bogota", countryCode: "57" }, isOwner: owner, barberId: own }) },
     "@/lib/db": { db, isOverlapError: (e) => e.message === "overlap" },
     "@/lib/time": time,
@@ -43,6 +44,16 @@ function setup({ owner = false, own = "mine", slots = true, overlap = false, not
   return { api, calls, form };
 }
 async function save(h) { await assert.rejects(h.api.createManualAppointment(undefined, h.form), new RegExp(`REDIRECT:/panel\\?dia=${day}`)); }
+
+for (const phone of ["", "300 123 4567"]) test(`La cita manual normaliza el nombre al crear (phone=${phone})`, async () => {
+  const h = setup();
+  h.form.set("name", "Julián Núñez");
+  h.form.set("phone", phone);
+  await save(h);
+  const customer = phone ? h.calls.upsert.create : h.calls.customers[0];
+  assert.equal(customer.name, "Julián Núñez");
+  assert.equal(customer.searchName, "julian nunez");
+});
 
 test("STAFF no puede crear para otro barbero ni consultar sus huecos", async () => {
   const h = setup(); h.form.set("barberId", "other");

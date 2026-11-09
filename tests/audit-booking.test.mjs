@@ -15,6 +15,13 @@ function load(file, mocks = {}, globals = {}) {
   return exports;
 }
 const input = { serviceId: "service", barberId: "barber", start: new Date("2027-01-01T12:00:00Z"), name: "Nuevo", phone: "+573001234567", email: "new@test.com", notes: null, privacyAccepted: true };
+
+test("La reserva guarda el nombre original y su búsqueda normalizada", async () => {
+  const h = bookingHarness();
+  assert.equal((await h.api.bookAppointment({ id: "shop", timezone: "UTC" }, { ...input, name: "Julián Núñez" })).ok, true);
+  assert.equal(h.customer().name, "Julián Núñez");
+  assert.equal(h.customer().searchName, "julian nunez");
+});
 test("IP desconocida no comparte contador de disponibilidad", async () => {
   let reads = 0;
   const api = load("src/app/b/[slug]/actions.ts", {
@@ -71,6 +78,7 @@ function bookingHarness(existing, overlap = false, available = true, upcoming = 
     },
   };
   const api = load("src/lib/booking.ts", {
+    "@/lib/search-text": load("src/lib/search-text.ts"),
     "@/lib/db": { db, isOverlapError: e => e.message === "overlap" },
     "@/lib/availability": { getDaySlots: async () => available ? [{ start: input.start.toISOString(), barberIds: ["barber"] }] : [] },
     "@/lib/barber-notifications": { notifyBarber: async () => {} },

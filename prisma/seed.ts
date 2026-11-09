@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { TZDate } from "@date-fns/tz";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { customerNameFields } from "../src/lib/search-text";
 
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL, max: Number(process.env.DATABASE_POOL_MAX ?? 10) }) });
 const TZ = "America/Bogota";
@@ -71,7 +72,7 @@ async function main() {
       const service = shop.services[i % shop.services.length];
       const customer = await db.customer.upsert({
         where: { shopId_phone: { shopId: shop.id, phone: c.phone } },
-        create: { shopId: shop.id, ...c },
+        create: { shopId: shop.id, ...c, ...customerNameFields(c.name) },
         update: {},
       });
       const startsAt = new Date(new TZDate(day.getFullYear(), day.getMonth(), day.getDate(), hour, 0, 0, TZ).getTime());
@@ -98,7 +99,7 @@ async function main() {
 
   // A las 12 queda una franja libre para Andrés, incluso con el servicio más largo.
   const manualDay = new TZDate(now.getFullYear(), now.getMonth(), now.getDate() + (now.getDay() === 0 ? 1 : 0), 12, 0, 0, TZ);
-  const walkIn = await db.customer.create({ data: { shopId: shop.id, name: "Cliente de paso", phone: null } });
+  const walkIn = await db.customer.create({ data: { shopId: shop.id, ...customerNameFields("Cliente de paso"), phone: null } });
   const manualService = shop.services[0];
   const manualStart = new Date(manualDay.getTime());
   await db.appointment.create({ data: {

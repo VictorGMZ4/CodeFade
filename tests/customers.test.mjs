@@ -12,6 +12,7 @@ function load(file, context, db) {
   const output = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   vm.runInNewContext(output, { exports, require: (id) => {
     if (id === "server-only") return {};
+    if (id === "@/lib/search-text") return load("src/lib/search-text.ts", context, db);
     if (id === "@/lib/auth") return { requireShop: async () => context };
     if (id === "@/lib/db") return { db };
     if (id === "@/lib/customers") return load("src/lib/customers.ts", context, db);
@@ -92,11 +93,34 @@ test("Lista SQL parametrizada: ámbito STAFF, búsqueda literal, orden y paginac
   assert.match(query.text, /LIMIT 51 OFFSET \$\d+/);
   assert.ok(query.values.includes("mine"));
   assert.ok(query.values.includes("shop"));
-  assert.ok(query.values.includes("%O'Neil\\_\\%%"));
+  assert.ok(query.values.includes("%o'neil\\_\\%%"));
   assert.ok(query.values.includes(50));
   assert.ok(!query.text.includes("O'Neil"));
   await api.listCustomers(owner, "", 1);
   assert.doesNotMatch(query.text, /IS NOT NULL|a\."barberId" =/);
+});
+
+test("Busca nombres normalizados y teléfonos con al menos tres dígitos", async () => {
+  let query;
+  const api = load("src/lib/customers.ts", owner, { $queryRaw: async value => { query = value; return []; } });
+  for (const [q, term] of [["Julián", "%julian%"], ["  NÚÑEZ  García ", "%nunez garcia%"], ["Ana", "%ana%"], ["12", "%12%"], ["", "%%"], ["   ", "%%"], ["\\%_", "%\\\\\\%\\_%"]]) {
+    await api.listCustomers(owner, q, 1);
+    assert.match(query.text, /c\."searchName" LIKE \$\d+/);
+    assert.doesNotMatch(query.text, /c\.phone (?:I?LIKE)/);
+    assert.ok(query.values.includes(term), q);
+  }
+  for (const [q, digits] of [["300 123 4567", "3001234567"], ["300-123-4567", "3001234567"], ["+57 300 123", "57300123"], ["(300) 123", "300123"], ["300", "300"]]) {
+    await api.listCustomers(staff, q, 1);
+    assert.match(query.text, /OR c\.phone LIKE \$\d+/);
+    assert.ok(query.values.includes(`%${digits}%`));
+    assert.ok(query.values.includes("mine"));
+  }
+  // Texto con números no es un teléfono: no se buscan teléfonos que contengan 101.
+  await api.listCustomers(owner, "Local 101", 1);
+  assert.doesNotMatch(query.text, /c\.phone LIKE/);
+  assert.ok(query.values.includes("%local 101%"));
+  // Clientes sin searchName (creados durante un despliegue) se buscan por su nombre.
+  assert.match(query.text, /c\."searchName" = '' AND lower\(c\.name\) LIKE \$\d+/);
 });
 
 test("Las cifras no suman precios ni estados de otro barbero", async () => {

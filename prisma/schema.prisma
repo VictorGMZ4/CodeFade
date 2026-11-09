@@ -166,6 +166,8 @@ model Customer {
   id                String        @id @default(cuid())
   shopId            String
   name              String
+  // Nombre sin acentos para búsquedas.
+  searchName        String        @default("")
   // Normalizado a E.164 (+573001234567)
   phone             String?
   email             String?

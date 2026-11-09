@@ -2,6 +2,7 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { searchDigits, searchText } from "@/lib/search-text";
 
 type Context = { shop: { id: string }; isOwner: boolean; barberId: string | null };
 
@@ -27,7 +28,13 @@ export async function listCustomers(context: Context, q: string, page: number) {
   // cliente) y solo después se cuentan las visitas de esas 51 filas; la fila
   // extra indica si hay otra página. Escapamos comodines para buscar el texto
   // literal escrito por el usuario.
-  const term = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+  const text = searchText(q);
+  const term = `%${text.replace(/[\\%_]/g, "\\$&")}%`;
+  const digits = searchDigits(q);
+  // Solo se busca por teléfono si lo escrito es un número ("300 123-4567", "+57…"):
+  // así "Local 101" no trae a todos los teléfonos que contienen 101.
+  const isPhone = digits.length >= 3 && /^[\d\s+().-]+$/.test(q.trim());
+  const phoneFilter = isPhone ? Prisma.sql`OR c.phone LIKE ${`%${digits}%`}` : Prisma.empty;
   const barberFilter = context.isOwner ? Prisma.empty : Prisma.sql`AND a."barberId" = ${context.barberId}`;
   return db.$queryRaw<CustomerRow[]>(Prisma.sql`
     SELECT c.id, c.name, c.phone, s.visits, s."noShows", s."lastVisit"
@@ -39,7 +46,8 @@ export async function listCustomers(context: Context, q: string, page: number) {
         WHERE a."customerId" = c.id AND a."shopId" = c."shopId" ${barberFilter}
       ) l ON true
       WHERE c."shopId" = ${context.shop.id}
-        AND (c.name ILIKE ${term} OR c.phone ILIKE ${term})
+        -- searchName vacío: cliente creado por código anterior durante un despliegue.
+        AND (c."searchName" LIKE ${term} OR (c."searchName" = '' AND lower(c.name) LIKE ${term}) ${phoneFilter})
         ${context.isOwner ? Prisma.empty : Prisma.sql`AND l.last IS NOT NULL`}
       ORDER BY l.last DESC NULLS LAST, c.id ASC
       LIMIT 51 OFFSET ${(page - 1) * 50}

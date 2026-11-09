@@ -1,6 +1,7 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
+import { customerNameFields } from "@/lib/search-text";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as z from "zod";
@@ -71,9 +72,9 @@ export async function createManualAppointment(_state: FormResult, formData: Form
       const customer = phone
         ? await tx.customer.upsert({
           where: { shopId_phone: { shopId: shop.id, phone } },
-          create: { shopId: shop.id, name: data.name, phone }, update: {},
+          create: { shopId: shop.id, ...customerNameFields(data.name), phone }, update: {},
         })
-        : await tx.customer.create({ data: { shopId: shop.id, name: data.name, phone: null } });
+        : await tx.customer.create({ data: { shopId: shop.id, ...customerNameFields(data.name), phone: null } });
       return tx.appointment.create({ data: {
         shopId: shop.id, barberId: data.barberId, serviceId: service.id, customerId: customer.id,
         startsAt, endsAt: new Date(startsAt.getTime() + service.durationMin * 60_000),

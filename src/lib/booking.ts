@@ -1,5 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
+import { customerNameFields } from "@/lib/search-text";
 import { db, isOverlapError } from "@/lib/db";
 import { getDaySlots } from "@/lib/availability";
 import { notifyBarber } from "@/lib/barber-notifications";
@@ -65,7 +66,7 @@ export async function bookAppointment(shop: Shop, input: BookingInput): Promise<
         // de consentimiento anterior. Todo se revierte si falla la reserva.
         const customer = await tx.customer.upsert({
           where: { shopId_phone: { shopId: shop.id, phone: input.phone } },
-          create: { shopId: shop.id, name: input.name, phone: input.phone, email: input.email, privacyAcceptedAt: now },
+          create: { shopId: shop.id, ...customerNameFields(input.name), phone: input.phone, email: input.email, privacyAcceptedAt: now },
           update: {},
         });
         await tx.customer.updateMany({

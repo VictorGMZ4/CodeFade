@@ -13,6 +13,7 @@ function load(file, mocks = {}, globals = {}) {
   return exports;
 }
 const time = load("src/lib/time.ts");
+const searchText = load("src/lib/search-text.ts");
 const shop = { id: "shop", timezone: "America/Bogota" };
 for (const role of ["STAFF", "OWNER"]) {
   test(`${role}: consulta y lectura solo afectan a su barbero y barbería`, async () => {
@@ -117,7 +118,7 @@ test("Un fallo al guardar el aviso no falla la reserva y WhatsApp se difiere", a
   db.$transaction = (fn) => fn(db);
   const helper = load("src/lib/barber-notifications.ts", { "server-only": {}, "@/lib/db": { db }, "next/server": { after: (fn) => deferred.push(fn) }, "@/lib/notify": { sendBarberNotice: async () => { sent++; } } });
   const start = new Date("2026-11-05T15:00:00Z");
-  const api = load("src/lib/booking.ts", { "server-only": {}, "@/lib/db": { db, isOverlapError: () => false }, "@/lib/time": time, "@/lib/availability": { getDaySlots: async () => [{ start: start.toISOString(), barberIds: ["assigned"] }] }, "@/lib/barber-notifications": helper });
+  const api = load("src/lib/booking.ts", { "server-only": {}, "@/lib/search-text": searchText, "@/lib/db": { db, isOverlapError: () => false }, "@/lib/time": time, "@/lib/availability": { getDaySlots: async () => [{ start: start.toISOString(), barberIds: ["assigned"] }] }, "@/lib/barber-notifications": helper });
   assert.equal((await api.bookAppointment(shop, { serviceId: "service", barberId: null, start, name: "Cliente", phone: "+573001234567", privacyAccepted: true })).ok, true);
   assert.equal(sent, 0);
   assert.equal(deferred.length, 1);
