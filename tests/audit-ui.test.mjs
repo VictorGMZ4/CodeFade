@@ -85,7 +85,7 @@ test("Anuncio de copiar es hermano del botón", () => {
 test("Reserva conserva formulario ante error general y solo recarga con SLOT_TAKEN", async () => {
   for (const code of [undefined, "SLOT_TAKEN"]) {
     let reads = 0;
-    const h = harness({ fetchOpenDays: async () => ["2027-01-01"], fetchSlots: async () => { reads++; return ["2027-01-01T12:00:00Z"]; }, book: async () => ({ error: "Mensaje de error", code }) }, props);
+    const h = harness({ fetchOpenDays: async () => ({ days: ["2027-01-01"], firstSlots: ["2027-01-01T12:00:00Z"] }), fetchSlots: async () => { reads++; return ["2027-01-01T12:00:00Z"]; }, book: async () => ({ error: "Mensaje de error", code }) }, props);
     h.render(); await Promise.all(h.jobs);
     let tree = h.render();
     nodes(tree).find(n => n.type === "button" && n.props.children === "12:00").props.onClick();
@@ -104,7 +104,7 @@ test("Reserva conserva formulario ante error general y solo recarga con SLOT_TAK
     await Promise.all(h.jobs);
     tree = h.render();
     assert.equal(prevented, true);
-    assert.equal(reads, code ? 2 : 1);
+    assert.equal(reads, code ? 1 : 0);
     assert.equal(nodes(tree).some(n => n.type === "form"), !code);
     assert.ok(nodes(tree).some(n => n.props?.children === "Mensaje de error"));
     nodes(tree).find(n => n.type === "button" && n.props.children === "12:00").props.onClick();
@@ -123,20 +123,22 @@ test("Respuesta antigua de días no cambia el servicio más reciente", async () 
   nodes(tree).filter(n => n.props?.name === "service")[0].props.onChange();
   tree = flow.render();
   nodes(tree).filter(n => n.props?.name === "service")[1].props.onChange();
-  latest.resolve(["2027-02-02"]); await Promise.resolve(); await Promise.resolve();
-  old.resolve(["2027-01-01"]); await Promise.all(flow.jobs);
-  assert.deepEqual(reads, ["s2"]);
+  latest.resolve({ days: ["2027-02-02"], firstSlots: [] }); await Promise.resolve(); await Promise.resolve();
+  old.resolve({ days: ["2027-01-01"], firstSlots: [] }); await Promise.all(flow.jobs);
+  // Los turnos del primer día vienen con los días: no hace falta pedirlos aparte.
+  assert.deepEqual(reads, []);
   assert.ok(nodes(flow.render()).some(n => n.props?.selected === "2027-02-02"));
 });
 test("Respuesta antigua de horarios no reemplaza el día seleccionado", async () => {
   const old = deferred(), latest = deferred();
-  const h = harness({ fetchOpenDays: async () => ["2027-01-01", "2027-01-02"], fetchSlots: (_slug, _service, _barber, day) => day === "2027-01-01" ? old.promise : latest.promise }, props);
+  const h = harness({ fetchOpenDays: async () => ({ days: ["2027-01-01", "2027-01-02"], firstSlots: ["2027-01-01T11:00:00Z"] }), fetchSlots: (_slug, _service, _barber, day) => day === "2027-01-02" ? old.promise : latest.promise }, props);
   h.render(); await h.jobs[0];
-  const calendar = nodes(h.render()).find(n => n.props?.onSelect);
-  calendar.props.onSelect("2027-01-02");
-  latest.resolve(["2027-01-02T14:00:00Z"]); await Promise.resolve(); await Promise.resolve();
-  old.resolve(["2027-01-01T12:00:00Z"]); await Promise.all(h.jobs);
+  // Primero el día 2 (respuesta lenta) y luego el día 1 (respuesta rápida).
+  nodes(h.render()).find(n => n.props?.onSelect).props.onSelect("2027-01-02");
+  nodes(h.render()).find(n => n.props?.onSelect).props.onSelect("2027-01-01");
+  latest.resolve(["2027-01-01T12:00:00Z"]); await Promise.resolve(); await Promise.resolve();
+  old.resolve(["2027-01-02T14:00:00Z"]); await Promise.all(h.jobs);
   const tree = h.render();
-  assert.ok(nodes(tree).some(n => n.type === "button" && n.props.children === "14:00"));
-  assert.ok(!nodes(tree).some(n => n.type === "button" && n.props.children === "12:00"));
+  assert.ok(nodes(tree).some(n => n.type === "button" && n.props.children === "12:00"));
+  assert.ok(!nodes(tree).some(n => n.type === "button" && n.props.children === "14:00"));
 });

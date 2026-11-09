@@ -37,6 +37,7 @@ model Membership {
   shop   Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@id([userId, shopId])
+  @@index([shopId])
 }
 
 enum BusinessType {
@@ -117,6 +118,7 @@ model ShopPhoto {
   barber    Barber?  @relation(fields: [barberId], references: [id], onDelete: SetNull)
 
   @@index([shopId, createdAt])
+  @@index([barberId])
 }
 
 // Franjas de trabajo semanales. Varias por día permiten pausas (p. ej. almuerzo).
@@ -219,6 +221,8 @@ model Appointment {
   @@index([shopId, barberId, customerId])
   @@index([barberId, startsAt])
   @@index([status, reminderSentAt, startsAt])
+  @@index([serviceId])
+  @@index([customerId])
 }
 
 enum NotificationType {
@@ -240,6 +244,8 @@ model Notification {
   appointment   Appointment      @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
   @@index([barberId, readAt, createdAt])
+  @@index([appointmentId])
+  @@index([shopId])
 }
 
 // Intentos recientes para limitar abusos en los formularios públicos.
@@ -249,6 +255,7 @@ model RateLimitHit {
   createdAt DateTime @default(now())
 
   @@index([key, createdAt])
+  @@index([createdAt])
 }
 
 // Solo se almacena el hash del enlace, nunca el token original.
@@ -262,4 +269,5 @@ model PasswordResetToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
 }

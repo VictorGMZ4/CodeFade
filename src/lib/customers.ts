@@ -23,23 +23,35 @@ type CustomerRow = { id: string; name: string; phone: string | null; visits: num
 
 export async function listCustomers(context: Context, q: string, page: number) {
   if (!context.isOwner && !context.barberId) return [];
-  // El agregado y la paginación ocurren en Postgres; la fila extra indica si hay otra página.
-  // Escapamos comodines para buscar el texto literal escrito por el usuario.
+  // Primero se pagina (ordenando por la última cita, que sale del índice por
+  // cliente) y solo después se cuentan las visitas de esas 51 filas; la fila
+  // extra indica si hay otra página. Escapamos comodines para buscar el texto
+  // literal escrito por el usuario.
   const term = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+  const barberFilter = context.isOwner ? Prisma.empty : Prisma.sql`AND a."barberId" = ${context.barberId}`;
   return db.$queryRaw<CustomerRow[]>(Prisma.sql`
-    SELECT c.id, c.name, c.phone,
-      COUNT(a.id) FILTER (WHERE a.status = 'COMPLETED')::int AS visits,
-      COUNT(a.id) FILTER (WHERE a.status = 'NO_SHOW')::int AS "noShows",
-      MAX(a."startsAt") FILTER (WHERE a.status = 'COMPLETED') AS "lastVisit"
-    FROM "Customer" c
-    LEFT JOIN "Appointment" a ON a."customerId" = c.id AND a."shopId" = c."shopId"
-      ${context.isOwner ? Prisma.empty : Prisma.sql`AND a."barberId" = ${context.barberId}`}
-    WHERE c."shopId" = ${context.shop.id}
-      AND (c.name ILIKE ${term} OR c.phone ILIKE ${term})
-      ${context.isOwner ? Prisma.empty : Prisma.sql`AND a.id IS NOT NULL`}
-    GROUP BY c.id
-    ORDER BY MAX(a."startsAt") DESC NULLS LAST, c.id ASC
-    LIMIT 51 OFFSET ${(page - 1) * 50}
+    SELECT c.id, c.name, c.phone, s.visits, s."noShows", s."lastVisit"
+    FROM (
+      SELECT c.id, c.name, c.phone, c."shopId", l.last
+      FROM "Customer" c
+      LEFT JOIN LATERAL (
+        SELECT MAX(a."startsAt") AS last FROM "Appointment" a
+        WHERE a."customerId" = c.id AND a."shopId" = c."shopId" ${barberFilter}
+      ) l ON true
+      WHERE c."shopId" = ${context.shop.id}
+        AND (c.name ILIKE ${term} OR c.phone ILIKE ${term})
+        ${context.isOwner ? Prisma.empty : Prisma.sql`AND l.last IS NOT NULL`}
+      ORDER BY l.last DESC NULLS LAST, c.id ASC
+      LIMIT 51 OFFSET ${(page - 1) * 50}
+    ) c
+    CROSS JOIN LATERAL (
+      SELECT COUNT(*) FILTER (WHERE a.status = 'COMPLETED')::int AS visits,
+        COUNT(*) FILTER (WHERE a.status = 'NO_SHOW')::int AS "noShows",
+        MAX(a."startsAt") FILTER (WHERE a.status = 'COMPLETED') AS "lastVisit"
+      FROM "Appointment" a
+      WHERE a."customerId" = c.id AND a."shopId" = c."shopId" ${barberFilter}
+    ) s
+    ORDER BY c.last DESC NULLS LAST, c.id ASC
   `);
 }
 

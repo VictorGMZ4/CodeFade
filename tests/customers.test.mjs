@@ -87,16 +87,16 @@ test("Lista SQL parametrizada: ámbito STAFF, búsqueda literal, orden y paginac
   const api = load("src/lib/customers.ts", staff, { $queryRaw: async value => { query = value; return []; } });
   await api.listCustomers(staff, "O'Neil_%", 2);
   assert.match(query.text, /a\."barberId" = \$\d+/);
-  assert.match(query.text, /a\.id IS NOT NULL/);
-  assert.match(query.text, /ORDER BY MAX\(a\."startsAt"\) DESC NULLS LAST/);
+  assert.match(query.text, /l\.last IS NOT NULL/);
+  assert.match(query.text, /ORDER BY l\.last DESC NULLS LAST, c\.id ASC\s+LIMIT 51/);
   assert.match(query.text, /LIMIT 51 OFFSET \$\d+/);
   assert.ok(query.values.includes("mine"));
   assert.ok(query.values.includes("shop"));
   assert.ok(query.values.includes("%O'Neil\\_\\%%"));
-  assert.equal(query.values.at(-1), 50);
+  assert.ok(query.values.includes(50));
   assert.ok(!query.text.includes("O'Neil"));
   await api.listCustomers(owner, "", 1);
-  assert.doesNotMatch(query.text, /a\.id IS NOT NULL|a\."barberId" =/);
+  assert.doesNotMatch(query.text, /IS NOT NULL|a\."barberId" =/);
 });
 
 test("Las cifras no suman precios ni estados de otro barbero", async () => {

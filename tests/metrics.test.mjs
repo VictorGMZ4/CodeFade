@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 function load(file, db = {}) {
   const exports = {};
   const source = ts.transpileModule(fs.readFileSync(file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  vm.runInNewContext(source, { exports, Date, require: id => {
+  vm.runInNewContext(source, { exports, Date, process: { env: { DATABASE_POOL_MAX: "1" } }, require: id => {
     if (id === "server-only") return {};
     if (id === "@/lib/db") return { db };
     if (id === "@/lib/time") return load("src/lib/time.ts");
@@ -80,7 +80,7 @@ test("Todos los agregados SQL parametrizan barbería y barbero STAFF; sin víncu
     timeOff: { findMany: async ({ where }) => { assert.equal(where.barber.shopId, "shop"); assert.equal(where.barber.id, "mine"); assert.equal(where.barber.active, true); return []; } },
     $queryRaw: async q => {
       queries.push(q);
-      return q.text.includes("WITH scoped") ? [{ minutes: 0 }] : [];
+      return q.text.includes("\"newCustomers\"") ? [{ minutes: 0 }] : [];
     },
   };
   const m = load("src/lib/metrics.ts", db);

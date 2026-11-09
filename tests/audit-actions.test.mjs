@@ -128,8 +128,7 @@ test("El profesional inactivo pierde el vínculo, el dueño lo conserva", async 
       "@/lib/session": { readSession: async () => ({ userId: "user", version: 1 }) },
       "@/lib/db": { db: {
         user: { findUnique: async () => ({ id: "user", sessionVersion: 1 }) },
-        membership: { findFirst: async () => ({ role, shopId: "shop", shop: owner.shop }) },
-        barber: { findFirst: async () => ({ id: "barber", phone: "", active: false }) },
+        membership: { findFirst: async () => ({ role, shopId: "shop", shop: { ...owner.shop, barbers: [{ id: "barber", phone: "", active: false }] } }) },
       } },
     });
     assert.equal((await api.requireShop()).barberId, role === "OWNER" ? "barber" : null);

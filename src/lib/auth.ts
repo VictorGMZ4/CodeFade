@@ -25,20 +25,19 @@ export const requireShop = cache(async () => {
   if (!user) redirect("/ingresar");
   if (user.mustChangePassword) redirect("/cambiar-contrasena");
 
+  // Una sola consulta: el negocio y, si lo hay, el profesional vinculado al usuario.
   const membership = await db.membership.findFirst({
     where: { userId: user.id },
-    include: { shop: true },
+    include: { shop: { include: { barbers: { where: { userId: user.id }, select: { id: true, phone: true, active: true }, take: 1 } } } },
     orderBy: { shop: { createdAt: "asc" } },
   });
   if (!membership) redirect("/registro");
 
-  const barber = await db.barber.findFirst({
-    where: { shopId: membership.shopId, userId: user.id },
-    select: { id: true, phone: true, active: true },
-  });
+  const { barbers, ...shop } = membership.shop;
+  const barber = barbers[0] ?? null;
   const linkedBarber = membership.role === "OWNER" || barber?.active ? barber : null;
   return {
-    user, shop: membership.shop, role: membership.role, barberId: linkedBarber?.id ?? null,
+    user, shop, role: membership.role, barberId: linkedBarber?.id ?? null,
     // false si el usuario atiende como profesional y aún no tiene WhatsApp.
     hasWhatsApp: !linkedBarber || Boolean(linkedBarber.phone),
     isOwner: membership.role === "OWNER",

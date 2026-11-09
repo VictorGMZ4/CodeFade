@@ -113,7 +113,7 @@ test("Consultas públicas rechazan objetos y limitan las consultas válidas por 
   });
   for (const args of [[{ not: "" }, "s", null], ["shop", { not: "" }, null], ["shop", "s", { not: "" }]]) {
     assert.equal((await api.fetchSlots(...args, "2027-01-01")).length, 0);
-    assert.equal((await api.fetchOpenDays(...args)).length, 0);
+    assert.equal((await api.fetchOpenDays(...args)).days.length, 0);
   }
   assert.equal((await api.fetchSlots("shop", "s", null, { not: "" })).length, 0);
   await api.fetchSlots("shop", "s", null, "2027-01-01");

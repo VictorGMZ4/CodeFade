@@ -25,11 +25,6 @@ export async function clientIp(): Promise<string> {
 export async function consume(key: string, limit: number, windowMs: number): Promise<{ limited: boolean; id: string }> {
   const hit = await db.rateLimitHit.create({ data: { key }, select: { id: true } });
   const count = await db.rateLimitHit.count({ where: { key, createdAt: { gte: new Date(Date.now() - windowMs) } } });
-  // Limpieza oportunista; un fallo de limpieza no altera el resultado del formulario.
-  if (Math.random() < 0.01) {
-    await db.rateLimitHit.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } } })
-      .catch(() => console.error("No se pudieron limpiar los intentos antiguos."));
-  }
   return { limited: count > limit, id: hit.id };
 }
 

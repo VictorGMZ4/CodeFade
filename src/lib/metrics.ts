@@ -59,20 +59,34 @@ export function workingMinutes(from: string, to: string, timezone: string, hours
   }
   return minutes;
 }
+/**
+ * Ejecuta consultas independientes en paralelo. En local (PGlite) solo hay una
+ * conexión (DATABASE_POOL_MAX=1) y van en serie para no bloquearse.
+ */
+async function all<T extends readonly unknown[]>(tasks: { [K in keyof T]: () => Promise<T[K]> }): Promise<T> {
+  if (process.env.DATABASE_POOL_MAX === "1") {
+    const results: unknown[] = [];
+    for (const task of tasks) results.push(await task());
+    return results as unknown as T;
+  }
+  return Promise.all(tasks.map((task) => task())) as unknown as Promise<T>;
+}
 type Summary = { reservations: number; online: number; manual: number; completed: number; booked: number; noShow: number; cancelled: number; total: number; revenue: number; expected: number; minutes: number; customers: number; newCustomers: number };
 type Daily = { day: string; completed: number; booked: number; noShow: number };
 export async function getMetrics(context: Context, params: MetricsParams, period: ReturnType<typeof resolvePeriod>) {
   const barberId = metricsBarber(context, params.barbero);
   if (barberId === "") throw new Error("Tu cuenta no está vinculada a ningún profesional. Pídeselo al dueño.");
   const scope = Prisma.sql`a."shopId" = ${context.shop.id} ${barberId === null ? Prisma.empty : Prisma.sql`AND a."barberId" = ${barberId}`}`;
+  // El mismo filtro para la subconsulta de visitas anteriores (alias p).
+  const priorScope = Prisma.sql`p."shopId" = ${context.shop.id} ${barberId === null ? Prisma.empty : Prisma.sql`AND p."barberId" = ${barberId}`}`;
   const selected = { shopId: context.shop.id, ...(barberId === null ? {} : { id: barberId }) };
-  const barbers = await db.barber.findMany({ where: selected, select: { id: true, name: true, active: true, workingHours: true }, orderBy: { name: "asc" } });
-  const off = await db.timeOff.findMany({ where: { barber: { ...selected, active: true }, startsAt: { lt: period.end }, endsAt: { gt: period.previous.start } }, select: { barberId: true, startsAt: true, endsAt: true } });
+  const [barbers, off] = await all([
+    () => db.barber.findMany({ where: selected, select: { id: true, name: true, active: true, workingHours: true }, orderBy: { name: "asc" } }),
+    () => db.timeOff.findMany({ where: { barber: { ...selected, active: true }, startsAt: { lt: period.end }, endsAt: { gt: period.previous.start } }, select: { barberId: true, startsAt: true, endsAt: true } }),
+  ] as const);
   const hours = barbers.filter(b => b.active).flatMap(b => b.workingHours);
   async function summarize(range: ReturnType<typeof dateRange>) {
     const [row] = await db.$queryRaw<Summary[]>(Prisma.sql`
-      WITH scoped AS (SELECT a.* FROM "Appointment" a WHERE ${scope}),
-      first_visits AS (SELECT "customerId", MIN("startsAt") AS first FROM scoped WHERE status <> 'CANCELLED' GROUP BY "customerId")
       SELECT COUNT(*) FILTER (WHERE status <> 'CANCELLED')::int AS reservations,
         COUNT(*) FILTER (WHERE status <> 'CANCELLED' AND source = 'ONLINE')::int AS online,
         COUNT(*) FILTER (WHERE status <> 'CANCELLED' AND source = 'MANUAL')::int AS manual,
@@ -84,45 +98,49 @@ export async function getMetrics(context: Context, params: MetricsParams, period
         COALESCE(SUM("priceCents") FILTER (WHERE status = 'BOOKED'), 0)::float8 AS expected,
         COALESCE(SUM(EXTRACT(EPOCH FROM ("endsAt" - "startsAt")) / 60) FILTER (WHERE status IN ('BOOKED', 'COMPLETED')), 0)::float8 AS minutes,
         COUNT(DISTINCT a."customerId") FILTER (WHERE status <> 'CANCELLED')::int AS customers,
-        COUNT(DISTINCT a."customerId") FILTER (WHERE status <> 'CANCELLED' AND f.first >= ${range.start} AND f.first < ${range.end})::int AS "newCustomers"
-      FROM scoped a LEFT JOIN first_visits f ON f."customerId" = a."customerId"
-      WHERE a."startsAt" >= ${range.start} AND a."startsAt" < ${range.end}
+        -- Cliente nuevo: su primera visita no cancelada cae en el rango, es decir,
+        -- no tiene ninguna anterior (usa el índice y no agrega todo el historial).
+        COUNT(DISTINCT a."customerId") FILTER (WHERE status <> 'CANCELLED' AND NOT EXISTS (
+          SELECT 1 FROM "Appointment" p
+          WHERE ${priorScope} AND p."customerId" = a."customerId" AND p.status <> 'CANCELLED' AND p."startsAt" < ${range.start}
+        ))::int AS "newCustomers"
+      FROM "Appointment" a
+      WHERE ${scope} AND a."startsAt" >= ${range.start} AND a."startsAt" < ${range.end}
     `);
     const available = workingMinutes(range.from, range.to, context.shop.timezone, hours, off);
     return { ...row, available, occupancy: occupancy(row.minutes, available) };
   }
-  // Consultas secuenciales: PGlite local dispone de una única conexión.
-  const current = await summarize(period);
-  const previous = await summarize(period.previous);
+  const [current, previous] = await all([() => summarize(period), () => summarize(period.previous)] as const);
   const inPeriod = Prisma.sql`${scope} AND a."startsAt" >= ${period.start} AND a."startsAt" < ${period.end}`;
   // Prisma guarda timestamp sin zona en UTC; primero lo interpretamos como UTC.
   const localStart = Prisma.sql`(a."startsAt" AT TIME ZONE 'UTC' AT TIME ZONE ${context.shop.timezone})`;
-  const daily = await db.$queryRaw<Daily[]>(Prisma.sql`
+  const dailyQuery = () => db.$queryRaw<Daily[]>(Prisma.sql`
     SELECT to_char(date_trunc(${period.days > 62 ? "week" : "day"}, ${localStart}), 'YYYY-MM-DD') AS day,
       COUNT(*) FILTER (WHERE status = 'COMPLETED')::int AS completed,
       COUNT(*) FILTER (WHERE status = 'BOOKED')::int AS booked,
       COUNT(*) FILTER (WHERE status = 'NO_SHOW')::int AS "noShow"
     FROM "Appointment" a WHERE ${inPeriod} AND status <> 'CANCELLED' GROUP BY 1 ORDER BY 1
   `);
-  const buckets = new Map(daily.map(row => [row.day, row]));
-  for (let day = period.from; day <= period.to; day = addDaysToDay(day, 1, context.shop.timezone)) {
-    const key = bucketDay(day, period.days, context.shop.timezone);
-    if (!buckets.has(key)) buckets.set(key, { day: key, completed: 0, booked: 0, noShow: 0 });
-  }
-  const revenue = await db.$queryRaw<{ id: string; revenue: number }[]>(Prisma.sql`
+  const revenueQuery = () => db.$queryRaw<{ id: string; revenue: number }[]>(Prisma.sql`
     SELECT a."barberId" AS id, COALESCE(SUM(a."priceCents") FILTER (WHERE status = 'COMPLETED'), 0)::float8 AS revenue
     FROM "Appointment" a WHERE ${inPeriod} GROUP BY a."barberId"
   `);
-  const services = await db.$queryRaw<{ id: string; name: string; count: number; revenue: number }[]>(Prisma.sql`
+  const servicesQuery = () => db.$queryRaw<{ id: string; name: string; count: number; revenue: number }[]>(Prisma.sql`
     SELECT s.id, s.name, COUNT(*)::int AS count,
       COALESCE(SUM(a."priceCents") FILTER (WHERE a.status = 'COMPLETED'), 0)::float8 AS revenue
     FROM "Appointment" a JOIN "Service" s ON s.id = a."serviceId" AND s."shopId" = a."shopId"
     WHERE ${inPeriod} AND a.status <> 'CANCELLED' GROUP BY s.id, s.name ORDER BY count DESC, s.name, s.id LIMIT 5
   `);
-  const hourly = await db.$queryRaw<{ hour: number; count: number }[]>(Prisma.sql`
+  const hourlyQuery = () => db.$queryRaw<{ hour: number; count: number }[]>(Prisma.sql`
     SELECT EXTRACT(HOUR FROM ${localStart})::int AS hour, COUNT(*)::int AS count
     FROM "Appointment" a WHERE ${inPeriod} AND a.status <> 'CANCELLED' GROUP BY 1 ORDER BY 1
   `);
+  const [daily, revenue, services, hourly] = await all([dailyQuery, revenueQuery, servicesQuery, hourlyQuery] as const);
+  const buckets = new Map(daily.map(row => [row.day, row]));
+  for (let day = period.from; day <= period.to; day = addDaysToDay(day, 1, context.shop.timezone)) {
+    const key = bucketDay(day, period.days, context.shop.timezone);
+    if (!buckets.has(key)) buckets.set(key, { day: key, completed: 0, booked: 0, noShow: 0 });
+  }
   return { current, previous, daily: [...buckets.values()].sort((a, b) => a.day.localeCompare(b.day)),
     revenue: barbers.map(b => ({ id: b.id, name: b.name, revenue: revenue.find(r => r.id === b.id)?.revenue ?? 0 })).sort((a, b) => b.revenue - a.revenue), services, hourly };
 }

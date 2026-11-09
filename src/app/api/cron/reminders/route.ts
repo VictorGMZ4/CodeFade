@@ -78,5 +78,51 @@ export async function GET(request: Request) {
     }
   }
 
-  return Response.json({ checked: candidates.length, due: candidates.length, sent, failures });
+  // La limpieza va aparte: si falla, los recordatorios ya se enviaron.
+  let cleaned: Record<string, number> | { error: string };
+  try {
+    cleaned = await cleanupOldRows(now);
+  } catch (error) {
+    console.error("[cron] No se pudo limpiar registros antiguos.", error);
+    cleaned = { error: "No se pudo limpiar" };
+  }
+
+  return Response.json({ checked: candidates.length, due: candidates.length, sent, failures, cleaned });
+}
+
+const CLEANUP_BATCH = 5000;
+/** Tope de lotes por tabla y ejecución: lo que quede se borra en la siguiente. */
+const CLEANUP_MAX_BATCHES = 10;
+
+/** Repite un borrado por lotes mientras llene el lote, hasta el tope. */
+async function deleteInBatches(run: () => Promise<number>) {
+  let total = 0;
+  for (let i = 0; i < CLEANUP_MAX_BATCHES; i++) {
+    const deleted = await run();
+    total += deleted;
+    if (deleted < CLEANUP_BATCH) break;
+  }
+  return total;
+}
+
+/**
+ * Borra, por lotes, filas que ya no sirven y que crecerían sin límite:
+ * intentos con más de 24 h, enlaces de recuperación caducados hace más de
+ * 7 días y avisos leídos hace más de 90 días.
+ */
+async function cleanupOldRows(now: Date) {
+  const hours = (n: number) => new Date(now.getTime() - n * 3_600_000);
+  const rateLimitHits = await deleteInBatches(() => db.$executeRaw(Prisma.sql`
+    DELETE FROM "RateLimitHit" WHERE id IN (
+      SELECT id FROM "RateLimitHit" WHERE "createdAt" < ${hours(24)} LIMIT ${CLEANUP_BATCH}
+    )`));
+  const resetTokens = await deleteInBatches(() => db.$executeRaw(Prisma.sql`
+    DELETE FROM "PasswordResetToken" WHERE id IN (
+      SELECT id FROM "PasswordResetToken" WHERE "expiresAt" < ${hours(24 * 7)} LIMIT ${CLEANUP_BATCH}
+    )`));
+  const notifications = await deleteInBatches(() => db.$executeRaw(Prisma.sql`
+    DELETE FROM "Notification" WHERE id IN (
+      SELECT id FROM "Notification" WHERE "readAt" < ${hours(24 * 90)} LIMIT ${CLEANUP_BATCH}
+    )`));
+  return { rateLimitHits, resetTokens, notifications };
 }

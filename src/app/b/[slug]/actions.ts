@@ -17,37 +17,52 @@ async function shopBySlug(slug: string) {
   return db.shop.findUnique({ where: { slug } });
 }
 
+/**
+ * Negocio, servicio y profesionales en UNA consulta (antes eran tres en serie,
+ * cada una con su viaje a la base de datos).
+ */
+async function availabilityContext(slug: string, serviceId: string, barberId: string | null) {
+  const shop = await db.shop.findUnique({
+    where: { slug },
+    include: {
+      services: { where: { id: serviceId, active: true }, select: { durationMin: true } },
+      barbers: { where: { active: true, ...(barberId ? { id: barberId } : {}) }, select: { id: true } },
+    },
+  });
+  const service = shop?.services[0];
+  if (!shop || !service) return null;
+  return { shop, durationMin: service.durationMin, barberIds: shop.barbers.map((b) => b.id) };
+}
+
+async function availabilityLimited() {
+  const ip = await clientIp();
+  return ip !== "desconocida" && (await consume(`availability:ip:${ip}`, 120, 5 * 60 * 1000)).limited;
+}
+
 export async function fetchSlots(slug: string, serviceId: string, barberId: string | null, day: string) {
   if (!AvailabilitySchema.extend({ day: z.string().refine(isValidDay) }).safeParse({ slug, serviceId, barberId, day }).success) return [];
-  const ip = await clientIp();
-  if (ip !== "desconocida" && (await consume(`availability:ip:${ip}`, 120, 5 * 60 * 1000)).limited) return [];
-  const shop = await shopBySlug(slug);
-  if (!shop || !isValidDay(day)) return [];
-  const service = await db.service.findFirst({ where: { id: serviceId, shopId: shop.id, active: true } });
-  if (!service) return [];
-  const barbers = await db.barber.findMany({
-    where: { shopId: shop.id, active: true, ...(barberId ? { id: barberId } : {}) },
-    select: { id: true },
-  });
-  const slots = await getDaySlots(shop, day, service.durationMin, barbers.map((b) => b.id));
+  if (await availabilityLimited()) return [];
+  const context = await availabilityContext(slug, serviceId, barberId);
+  if (!context) return [];
+  const slots = await getDaySlots(context.shop, day, context.durationMin, context.barberIds);
   return slots.map((s) => s.start);
 }
 
-/** Días del rango reservable en los que hay al menos un turno libre. */
-export async function fetchOpenDays(slug: string, serviceId: string, barberId: string | null) {
-  if (!AvailabilitySchema.safeParse({ slug, serviceId, barberId }).success) return [];
-  const ip = await clientIp();
-  if (ip !== "desconocida" && (await consume(`availability:ip:${ip}`, 120, 5 * 60 * 1000)).limited) return [];
-  const shop = await shopBySlug(slug);
-  if (!shop) return [];
-  const service = await db.service.findFirst({ where: { id: serviceId, shopId: shop.id, active: true } });
-  if (!service) return [];
-  const barbers = await db.barber.findMany({
-    where: { shopId: shop.id, active: true, ...(barberId ? { id: barberId } : {}) },
-    select: { id: true },
-  });
-  const slots = await getSlots(shop, bookableDays(shop, 60), service.durationMin, barbers.map((b) => b.id));
-  return [...slots.entries()].filter(([, list]) => list.length > 0).map(([day]) => day);
+export type OpenDays = { days: string[]; firstSlots: string[] };
+
+/**
+ * Días del rango reservable con al menos un turno libre, y los turnos del
+ * primero: así el cliente ve las primeras horas sin un segundo viaje.
+ */
+export async function fetchOpenDays(slug: string, serviceId: string, barberId: string | null): Promise<OpenDays> {
+  const empty: OpenDays = { days: [], firstSlots: [] };
+  if (!AvailabilitySchema.safeParse({ slug, serviceId, barberId }).success) return empty;
+  if (await availabilityLimited()) return empty;
+  const context = await availabilityContext(slug, serviceId, barberId);
+  if (!context) return empty;
+  const slots = await getSlots(context.shop, bookableDays(context.shop, 60), context.durationMin, context.barberIds);
+  const open = [...slots.entries()].filter(([, list]) => list.length > 0);
+  return { days: open.map(([day]) => day), firstSlots: open[0]?.[1].map((s) => s.start) ?? [] };
 }
 
 const BookingSchema = z.object({

@@ -11,6 +11,11 @@ import { parsePrice, parseWhatsApp, slugify } from "@/lib/format";
 import { hhmmToMinutes, isValidDay, localToUtc } from "@/lib/time";
 import { RESERVED_SLUGS } from "@/lib/reserved-slugs";
 
+// Deben coincidir con MAX_SERVICE_MINUTES y MAX_TIME_OFF_DAYS de lib/availability.ts,
+// que los usa para acotar la consulta de huecos.
+const MAX_SERVICE_MINUTES = 480;
+const MAX_TIME_OFF_DAYS = 366;
+
 // Todas las acciones obtienen la barbería de la sesión y filtran por shopId:
 // nunca confiamos en un id de barbería que venga del formulario.
 
@@ -21,7 +26,7 @@ const IdSchema = z.string().min(1).max(64);
 
 const ServiceSchema = z.object({
   name: z.string().trim().min(2, { error: "Escribe un nombre." }).max(60),
-  durationMin: z.coerce.number().int().min(5, { error: "Mínimo 5 minutos." }).max(480),
+  durationMin: z.coerce.number().int().min(5, { error: "Mínimo 5 minutos." }).max(MAX_SERVICE_MINUTES),
   price: z.string().trim(),
 });
 
@@ -154,7 +159,7 @@ export async function addTimeOff(_s: FormResult, formData: FormData): Promise<Fo
   const endsAt = localToUtc(toDay, toMin, shop.timezone);
   if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return { error: "Completa las fechas y horas." };
   if (endsAt <= startsAt) return { error: "El fin debe ser posterior al inicio." };
-  if (endsAt.getTime() - startsAt.getTime() > 366 * 24 * 60 * 60 * 1000) return { error: "La ausencia no puede superar 366 días." };
+  if (endsAt.getTime() - startsAt.getTime() > MAX_TIME_OFF_DAYS * 24 * 60 * 60 * 1000) return { error: `La ausencia no puede superar ${MAX_TIME_OFF_DAYS} días.` };
 
   const reason = String(formData.get("reason") ?? "").trim().slice(0, 100) || null;
   await db.timeOff.create({ data: { barberId, startsAt, endsAt, reason } });

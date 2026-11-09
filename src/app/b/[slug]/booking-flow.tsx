@@ -77,10 +77,16 @@ export function BookingFlow({
     try {
       const open = await fetchOpenDays(slug, sId, bId || null);
       if (request !== daysRequest.current) return;
-      setDays(open);
-      if (open[0] && slotsVersion === slotsRequest.current) {
-        setMonth(open[0].slice(0, 7));
-        loadSlots(sId, bId, open[0]);
+      setDays(open.days);
+      const first = open.days[0];
+      // Los turnos del primer día llegan en la misma respuesta. No pisamos un
+      // día que el usuario haya elegido mientras tanto.
+      if (first && slotsVersion === slotsRequest.current) {
+        slotsRequest.current++;
+        setMonth(first.slice(0, 7));
+        setDay(first);
+        setStart(null);
+        setSlots(open.firstSlots);
       }
     } catch {
       if (request === daysRequest.current) setLoadError(true);
