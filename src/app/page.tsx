@@ -1,27 +1,29 @@
 import Link from "next/link";
+import { Archivo } from "next/font/google";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getUser } from "@/lib/auth";
+import { BogotaClock } from "./_landing/clock";
+import { Closing } from "./_landing/closing";
+import { DemoBooking } from "./_landing/demo-booking";
 import { Reveal } from "./_landing/reveal";
+import { ServicesDemo } from "./_landing/services-demo";
+import { Steps } from "./_landing/steps";
+import { Switches } from "./_landing/switches";
 import "./_landing/landing.css";
 
-const DEMO_SLUG = "demo";
+// Archivo: 900 para los titulares en bloque; 400–600 para el texto y la app.
+const archivo = Archivo({ subsets: ["latin"], weight: ["400", "500", "600", "900"], variable: "--font-lp" });
 
 const FAQ = [
-  ["¿Tengo que instalar algo?", "No. AppTuServicio funciona en el navegador del móvil o del ordenador, para ti y para tus clientes."],
-  ["¿Mis clientes necesitan crear una cuenta?", "No. Reservan con su nombre y su WhatsApp, y reciben un enlace para ver o cancelar la cita."],
-  ["¿Qué pasa si dos clientes eligen la misma hora?", "Solo uno se la lleva. El horario se comprueba al confirmar y al otro cliente se le pide que elija otro."],
-  ["¿Puedo tener varios profesionales?", "Sí. Cada uno tiene su horario y su agenda, y el cliente puede elegir con quién o dejar que le toque el primero libre."],
+  ["¿Tengo que instalar algo?", "No. AppTuServicio funciona en el navegador del celular o del computador, para ti y para tus clientes."],
+  ["¿Mis clientes necesitan una cuenta?", "No. Reservan con su nombre y su WhatsApp, y reciben un enlace para ver, cambiar o cancelar la cita."],
+  ["¿Y si dos eligen la misma hora?", "Solo uno se la lleva. La hora se comprueba al confirmar y al otro cliente se le pide que elija otra."],
+  ["¿Puedo tener varios profesionales?", "Sí. Cada uno tiene su horario y su agenda, y el cliente elige con quién o deja que le toque el primero libre."],
+  ["¿El cliente puede cambiar la hora?", "Sí, desde el enlace de su cita, hasta dos veces y con la antelación que tú definas. Al profesional le llega el aviso."],
   ["¿Y la hora del almuerzo?", "Cada día admite varias franjas, por ejemplo de 9:00 a 13:00 y de 14:00 a 19:00. En la pausa no se puede reservar."],
-  ["¿Puedo cerrar unos días por vacaciones?", "Sí. Bloqueas días enteros o unas horas para cada profesional y esos huecos desaparecen de la reserva."],
   ["¿Cómo llega el recordatorio?", "Por WhatsApp y, si el cliente dejó su correo, también por email. Tú decides con cuántas horas de antelación."],
-  ["¿En qué países funciona?", "En cualquiera. Al crear el negocio eliges el país y AppTuServicio usa su hora, su moneda y su prefijo telefónico."],
-];
-
-const BENEFITS = [
-  { color: "lp-green", icon: "✓", title: "Menos clientes que no llegan", text: "Recordatorio por WhatsApp con enlace para cancelar y liberar el hueco" },
-  { color: "lp-pink", icon: "⏱", title: "Nunca dos a la misma hora", text: "Cada hora se comprueba al confirmar; solo una reserva entra" },
-  { color: "lp-orange", icon: "●", title: "Tus datos, solo tuyos", text: "Contraseñas cifradas y una cuenta para cada profesional" },
+  ["¿En qué países funciona?", "En cualquiera. Al crear el negocio eliges el país, y la agenda usa su hora, su moneda y su prefijo telefónico."],
 ];
 
 // La portada es estática; solo la comprobación de sesión llega en streaming.
@@ -40,183 +42,141 @@ async function RedirectIfSignedIn() {
 
 export default function Home() {
   return (
-    <div className="lp flex-1">
+    <div className={`lp ${archivo.variable} flex-1`}>
       <Suspense>
         <RedirectIfSignedIn />
       </Suspense>
       <Reveal />
-
-      <header className="lp-header">
-        <nav className="lp-wrap lp-nav" aria-label="Principal">
-          <Link href="/" className="lp-logo">
-            <span className="lp-mark" aria-hidden>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round">
-                <rect x="3" y="5" width="18" height="16" rx="3" />
-                <path d="M8 3v4M16 3v4M3 10h18" />
-              </svg>
-            </span>
-            AppTuServicio
-          </Link>
-          <a href="#funciones" className="lp-link hidden md:inline">Funciones</a>
-          <a href="#confianza" className="lp-link hidden md:inline">Confianza</a>
-          <a href="#preguntas" className="lp-link hidden md:inline">Preguntas</a>
-          <Link href="/ingresar" className="lp-link text-white!">Ingresar</Link>
-          <Link href="/registro" className="lp-btn lp-btn-blue hidden! sm:inline-flex! h-11! px-[18px]! text-[15px]!">
-            Crear mi negocio
-          </Link>
-        </nav>
-      </header>
-
+      <Header />
       <main>
-        <section id="funciones" className="lp-wrap lp-hero scroll-mt-4">
-          <div>
-            <span className="lp-pill"><span className="lp-dot" />Para negocios con citas</span>
-            <h1 className="lp-h1">
-              Tus clientes reservan <span className="lp-grad">solos.</span>
-            </h1>
-            <p className="lp-lead">
-              Barberías, peluquerías, uñas, estética y spa: eligen servicio, profesional y hora desde el móvil, y tú lo
-              ves todo ordenado.
-            </p>
-            <div className="lp-actions">
-              <Link href="/registro" className="lp-btn lp-btn-blue">＋ Crear mi negocio gratis</Link>
-              <Link href={`/b/${DEMO_SLUG}`} className="lp-btn lp-btn-glass">Ver una reserva de ejemplo</Link>
-            </div>
-            <ul className="lp-checks">
-              {["Sin instalar nada", "Recordatorio por WhatsApp", "Sin dobles reservas"].map((c) => (
-                <li key={c}>
-                  <span className="lp-tick" aria-hidden>✓</span>
-                  {c}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <AppPreview />
-        </section>
-
-        <section id="confianza" className="lp-block scroll-mt-4">
-          <div data-reveal className="lp-wrap lp-sec">
-            <div>
-              <span className="lp-pill lp-pill-ok"><span className="lp-dot" />Confianza</span>
-              <h2 className="lp-h2">
-                Menos llamadas, <span className="lp-grad">menos ausencias.</span>
-              </h2>
-              <p className="lp-text">
-                La agenda se cuida sola: comprueba cada hora antes de confirmarla y le recuerda la cita a tu cliente.
+        <Hero />
+        <section aria-labelledby="servicios" className="lp-band-light">
+          <div className="lp-wrap lp-two">
+            <div data-reveal>
+              <h2 id="servicios" className="lp-display lp-display-md">Escribes y se reserva</h2>
+              <p className="lp-lead">
+                Escribe tus servicios con su duración y su precio. Tu página de reservas queda lista al instante, con tu
+                nombre y tus horarios.
               </p>
             </div>
-            <ul className="lp-frost">
-              {BENEFITS.map((b) => (
-                <li key={b.title} className="lp-row">
-                  <span className={`lp-ico ${b.color}`} aria-hidden>
-                    <span>{b.icon}</span>
-                  </span>
-                  <span>
-                    <span className="lp-row-title">{b.title}</span>
-                    <span className="lp-row-text">{b.text}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section id="preguntas" className="lp-block scroll-mt-4">
-          <div className="lp-wrap lp-faq">
-            <div className="text-center">
-              <span className="lp-pill"><span className="lp-dot" />Preguntas</span>
-              <h2 className="lp-h2">Preguntas frecuentes</h2>
-            </div>
-            <div className="lp-frost mt-7">
-              {FAQ.map(([q, a]) => (
-                <details key={q} className="lp-row">
-                  <summary className="press">
-                    {q}
-                    <span aria-hidden>+</span>
-                  </summary>
-                  <p className="lp-answer">{a}</p>
-                </details>
-              ))}
+            <div className="lp-card-dark" data-reveal>
+              <ServicesDemo />
             </div>
           </div>
         </section>
-
-        <section className="lp-wrap pb-16">
-          <div data-reveal className="lp-cta">
-            <div>
-              <h2 className="lp-h2 mt-0!">
-                Abre tu agenda <span className="lp-grad">hoy.</span>
-              </h2>
-              <p className="lp-text text-[19px]!">
-                Creas la cuenta, añades tus servicios y compartes el enlace. Desde ese momento tus clientes pueden reservar.
-              </p>
-            </div>
-            <Link href="/registro" className="lp-btn lp-btn-blue">Crear mi negocio gratis</Link>
+        <section aria-labelledby="como" className="lp-wrap lp-section">
+          <h2 id="como" className="lp-display lp-display-md" data-reveal>Así funciona</h2>
+          <Steps />
+        </section>
+        <section aria-labelledby="funciones" className="lp-band-dark">
+          <div className="lp-wrap">
+            <h2 id="funciones" className="lp-display lp-display-lg lp-volt-text" data-reveal>
+              Tu agenda trabaja sola
+            </h2>
+            <p className="lp-lead lp-on-dark" data-reveal>Enciende cada función y mira qué cambia para tu negocio.</p>
+          </div>
+          <Switches />
+        </section>
+        <Faq />
+        <section aria-labelledby="empieza" className="lp-wrap lp-section">
+          <div className="lp-card-cta">
+            <h2 id="empieza" className="lp-display lp-display-lg lp-volt-text" data-reveal>Empieza hoy</h2>
+            <Closing />
           </div>
         </section>
       </main>
-
-      <footer className="lp-wrap">
-        <div className="lp-footer">
-          <span>AppTuServicio · Agenda online para negocios con citas</span>
-          <span className="flex gap-4">
-            <a href="#funciones">Funciones</a>
-            <a href="#preguntas">Preguntas</a>
-            <Link href="/ingresar">Ingresar</Link>
-            <Link href="/privacidad">Privacidad</Link>
-          </span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
 
-// Vista de la app con datos de ejemplo (no consulta la base de datos).
-function AppPreview() {
+function Header() {
   return (
-    <div className="lp-phone lp-frost" role="img" aria-label="Ejemplo de la agenda de AppTuServicio en el móvil">
-      <div className="lp-chip" aria-hidden>
-        <span className="lp-ico lp-green">↗</span>
-        <span>
-          <b>+12%</b>
-          <small>reservas este mes</small>
-        </span>
+    <header className="lp-header">
+      <nav className="lp-wrap lp-nav" aria-label="Principal">
+        <Link href="/" className="lp-wordmark">AppTuServicio</Link>
+        <div className="lp-nav-links">
+          <a href="#servicios">Servicios</a>
+          <a href="#como">Así funciona</a>
+          <a href="#preguntas">Preguntas</a>
+        </div>
+        <div className="lp-nav-end">
+          <Link href="/ingresar" className="lp-nav-signin">Ingresar</Link>
+          <Link href="/registro" className="lp-pill lp-pill-outline">Crear mi negocio</Link>
+        </div>
+      </nav>
+    </header>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="lp-hero">
+      <div className="lp-wrap lp-hero-copy">
+        <h1 className="lp-display lp-display-xl">
+          <span className="lp-mask"><span>Tus clientes</span></span>
+          <span className="lp-mask"><span>reservan solos</span></span>
+        </h1>
+        <p className="lp-lead lp-rise">
+          Agenda online para barberías, peluquerías, uñas, estética y spa. Tu cliente elige servicio, profesional y hora
+          desde el celular, y a ti te llega ordenado.
+        </p>
+        <div className="lp-actions lp-rise">
+          <Link href="/registro" className="lp-pill lp-pill-volt">Crear mi negocio gratis</Link>
+          <Link href="/b/demo" className="lp-textlink">Ver una reserva de ejemplo</Link>
+        </div>
       </div>
-      <div className="lp-screen" aria-hidden>
-        <div className="lp-bar">
-          <h2>Agenda</h2>
-          <span className="lp-bell">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.4A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.6L18 12.6V9a6 6 0 0 0-6-6Zm-2 15a2 2 0 0 0 4 0Z" /></svg>
-          </span>
-        </div>
-        <div className="lp-banner">
-          <p>Hoy · Viernes 6</p>
-          <p className="lp-big">$ 128.000 previstos</p>
-          <p>5 citas en Estudio Lumen</p>
-          <span className="lp-banner-btn">Ver la agenda</span>
-        </div>
-        <p className="lp-label">Próximas <span>Ver todas</span></p>
-        {[
-          ["10:00", "Laura Gómez", "Corte y peinado · Ana", "Reservada", false],
-          ["11:30", "Marta Ruiz", "Manicure · Sofía", "Atendida", true],
-        ].map(([t, n, s, st, ok]) => (
-          <div key={String(t)} className="lp-appt">
-            <span className="lp-appt-time">{t}</span>
-            <span className="min-w-0">
-              <span className="lp-appt-name block truncate">{n}</span>
-              <span className="lp-appt-info block truncate">{s}</span>
-            </span>
-            <span className={ok ? "lp-status lp-status-ok" : "lp-status"}>{st}</span>
+      <div className="lp-wrap">
+        <div className="lp-hero-stage lp-rise">
+          <div className="lp-hero-note">
+            <p className="lp-display lp-display-sm">Pruébalo como tu cliente</p>
+            <p>Elige servicio, profesional y hora. Nada se guarda: es la reserva de un negocio de ejemplo.</p>
           </div>
-        ))}
-        <div className="lp-tabs">
-          <span className="lp-on">Agenda</span>
-          <span>Clientes</span>
-          <span>Métricas</span>
-          <span>Equipo</span>
+          <DemoBooking />
         </div>
       </div>
-    </div>
+    </section>
+  );
+}
+
+function Faq() {
+  return (
+    <section aria-labelledby="preguntas" className="lp-wrap lp-section lp-faq">
+      <h2 id="preguntas" className="lp-display lp-display-md lp-faq-head" data-reveal>Preguntas frecuentes</h2>
+      <div className="lp-faq-list">
+        {FAQ.map(([q, a]) => (
+          <details key={q} name="faq" className="lp-tile" data-reveal>
+            <summary>
+              {q}
+              <span className="lp-plus" aria-hidden />
+            </summary>
+            <p>{a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="lp-footer">
+      <div className="lp-wrap lp-footer-grid">
+        <div>
+          <p className="lp-footer-lead">Agenda online para barberías, peluquerías, uñas, estética y spa.</p>
+          <p className="lp-small"><BogotaClock /></p>
+        </div>
+        <nav aria-label="Pie de página" className="lp-footer-links">
+          <a href="#servicios">Servicios</a>
+          <a href="#como">Así funciona</a>
+          <a href="#preguntas">Preguntas</a>
+          <Link href="/b/demo">Reserva de ejemplo</Link>
+          <Link href="/ingresar">Ingresar</Link>
+          <Link href="/privacidad">Privacidad</Link>
+        </nav>
+      </div>
+      <p className="lp-wrap lp-footer-mark" aria-hidden>AppTuServicio</p>
+      <p className="lp-wrap lp-small lp-footer-legal">© 2026 AppTuServicio</p>
+    </footer>
   );
 }

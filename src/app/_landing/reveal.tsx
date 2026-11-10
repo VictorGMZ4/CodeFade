@@ -20,11 +20,15 @@ export function Reveal() {
       { rootMargin: "0px 0px -12% 0px" },
     );
     for (const b of blocks) {
-      const r = b.getBoundingClientRect();
-      if (r.top > window.innerHeight) {
-        b.dataset.reveal = "pending";
-        io.observe(b);
+      if (b.dataset.reveal === "in") continue;
+      // Lo que ya está en pantalla se muestra sin esperar (también si quedó
+      // pendiente de una visita anterior); lo de más abajo entra al llegar.
+      if (b.getBoundingClientRect().top <= window.innerHeight) {
+        b.dataset.reveal = "in";
+        continue;
       }
+      b.dataset.reveal = "pending";
+      io.observe(b);
     }
     return () => io.disconnect();
   }, []);
