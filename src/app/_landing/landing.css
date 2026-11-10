@@ -161,6 +161,8 @@ button.lp-ui-row { cursor: pointer; }
 .lp-steps-stage { position: sticky; top: calc(72px + 6svh); height: 70svh; background: var(--lp-mist); border-radius: var(--lp-r-big); display: grid; place-items: center; padding: 32px; }
 .lp-stage-ui { width: min(100%, 440px); }
 .lp-stage-ui > * { animation: lp-fade 420ms var(--ease) both; }
+/* Fragmento propio de cada paso: solo en el celular. */
+.lp-step-ui { display: none; }
 
 /* ── Banda azul noche: interruptores ── */
 .lp-band-dark { background: var(--lp-ink); color: #fff; padding-block: clamp(80px, 9vw, 128px); }
@@ -246,6 +248,10 @@ button.lp-ui-row { cursor: pointer; }
   .lp { font-size: 17px; }
   /* En el celular la acción principal ya está en la primera pantalla. */
   .lp-nav .lp-pill-outline { display: none; }
+  /* Cada paso lleva su fragmento debajo; el escenario compartido sobra. */
+  .lp-steps-stage { display: none; }
+  .lp-step-ui { display: block; margin-top: 20px; border: 14px solid var(--lp-mist); border-radius: 24px; }
+  .lp-step { padding-block: 24px; }
   .lp-nav { min-height: 64px; gap: 12px; }
   .lp-nav-end { gap: 12px; }
   .lp-pill-outline { padding: 0 14px; min-height: 38px; font-size: 15px; }

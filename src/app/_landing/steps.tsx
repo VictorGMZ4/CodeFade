@@ -4,14 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import { DEMO_SHOP } from "./demo-data";
 
 const STEPS = [
-  { title: "Compartes tu enlace.", text: "En tu Instagram, en tu estado de WhatsApp o en un código QR junto al espejo." },
-  { title: "Tu cliente elige y confirma.", text: "Servicio, profesional y una hora libre, sin crear cuenta ni descargar nada." },
-  { title: "Le llega el recordatorio.", text: "Un día antes, por WhatsApp, con un enlace para cambiar la hora o cancelar." },
+  { title: "Compartes tu enlace.", text: "En tu Instagram, en tu estado de WhatsApp o en un código QR junto al espejo.", Ui: ShareState },
+  { title: "Tu cliente elige y confirma.", text: "Servicio, profesional y una hora libre, sin crear cuenta ni descargar nada.", Ui: BookedState },
+  { title: "Le llega el recordatorio.", text: "Un día antes, por WhatsApp, con un enlace para cambiar la hora o cancelar.", Ui: ReminderState },
 ];
 
 /**
  * Tres frases a la izquierda; a la derecha, un fragmento fijo que cambia al
  * paso que está en el centro de la pantalla. Sin JavaScript se ve el primero.
+ * En el celular cada paso muestra su propio fragmento debajo del texto.
  */
 export function Steps() {
   const [active, setActive] = useState(0);
@@ -37,14 +38,15 @@ export function Steps() {
           <li key={s.title} data-step={i} ref={(el) => { refs.current[i] = el; }} className="lp-step" aria-current={active === i ? "step" : undefined}>
             <p className="lp-step-title">{s.title}</p>
             <p className="lp-step-text">{s.text}</p>
+            <div data-ui className="lp-ui lp-step-ui" aria-hidden>
+              <s.Ui />
+            </div>
           </li>
         ))}
       </ol>
       <div className="lp-steps-stage">
         <div data-ui className="lp-ui lp-stage-ui" aria-hidden>
-          {active === 0 && <ShareState />}
-          {active === 1 && <BookedState />}
-          {active === 2 && <ReminderState />}
+          {STEPS.map((s, i) => active === i && <s.Ui key={s.title} />)}
         </div>
       </div>
     </div>
