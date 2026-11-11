@@ -45,8 +45,8 @@ function NavLinks({ variant, pathname, role, barberId }: Variant & { pathname: s
               href={href}
               aria-current={isActive(href) ? "page" : undefined}
               className={cx(
-                "press block rounded-lg px-3 py-1.5 text-sm",
-                isActive(href) ? "bg-brand text-brand-ink font-semibold" : "text-muted hover:text-ink hover:bg-raised",
+                "press block rounded-full px-3 py-1.5 text-sm focus-visible:outline-2 focus-visible:outline-brand",
+                isActive(href) ? "bg-brand text-brand-ink font-semibold" : "text-field-muted hover:text-field-ink hover:bg-white/10",
               )}
             >
               {label}
@@ -107,8 +107,8 @@ function MoreMenu({ active, pathname }: { active: boolean; pathname: string | nu
       </span>
       Más
     </button>
-    {open && <ul id={id} aria-label="Más opciones" className="absolute bottom-full right-2 mb-2 w-44 rounded-xl border border-line bg-surface shadow-card p-1">
-      {LINKS.slice(4).map(({ href, label }) => <li key={href}><Link href={href} onClick={() => setOpen(false)} aria-current={pathname?.startsWith(href) ? "page" : undefined} className={cx("block rounded-lg px-4 py-3 text-sm", pathname?.startsWith(href) ? "bg-brand font-semibold text-brand-ink" : "hover:bg-raised")}>{label}</Link></li>)}
+    {open && <ul id={id} aria-label="Más opciones" className="absolute bottom-full right-2 mb-2 w-44 rounded-2xl border border-line bg-surface shadow-sheet p-1">
+      {LINKS.slice(4).map(({ href, label }) => <li key={href}><Link href={href} onClick={() => setOpen(false)} aria-current={pathname?.startsWith(href) ? "page" : undefined} className={cx("block rounded-full px-4 py-3 text-sm", pathname?.startsWith(href) ? "bg-brand font-semibold text-brand-ink" : "hover:bg-raised")}>{label}</Link></li>)}
     </ul>}
   </div>;
 }

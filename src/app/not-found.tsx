@@ -10,7 +10,7 @@ export default function NotFound() {
   return <main className="flex-1 flex items-center justify-center bg-paper px-4 py-16">
     <div className="w-full max-w-lg rounded-2xl border border-line bg-surface shadow-card p-6 sm:p-9">
       <p className="text-muted mb-3">404</p>
-      <h1 className="font-display text-[30px] sm:text-[34px] mb-4">No encontramos esta página</h1>
+      <h1 className="brand-display brand-display-md mb-4">No encontramos esta página</h1>
       <p className="text-muted mb-6">El enlace puede haber cambiado o la página ya no está disponible.</p>
       <div className="flex flex-wrap gap-3">
         <Link href="/" className={buttonClass("primary")}>Ir al inicio</Link>

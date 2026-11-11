@@ -45,7 +45,7 @@ async function BarberPageContent({ params }: PageProps<"/panel/equipo/[id]">) {
       {isOwner && <Link href="/panel/equipo" className="press inline-block text-sm text-muted mb-3">
         ‹ Equipo
       </Link>}
-      <h1 className="font-display text-[28px] leading-tight tracking-tight mb-6">{barber.name}</h1>
+      <h1 className="brand-display brand-display-lg mb-6">{barber.name}</h1>
 
       <Card className="p-5 mb-6">
         <PhotoPicker

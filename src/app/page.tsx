@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Archivo } from "next/font/google";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getUser } from "@/lib/auth";
@@ -11,9 +10,6 @@ import { ServicesDemo } from "./_landing/services-demo";
 import { Steps } from "./_landing/steps";
 import { Switches } from "./_landing/switches";
 import "./_landing/landing.css";
-
-// Archivo: 900 para los titulares en bloque; 400–600 para el texto y la app.
-const archivo = Archivo({ subsets: ["latin"], weight: ["400", "500", "600", "900"], variable: "--font-lp" });
 
 const FAQ = [
   ["¿Tengo que instalar algo?", "No. AppTuServicio funciona en el navegador del celular o del computador, para ti y para tus clientes."],
@@ -42,7 +38,7 @@ async function RedirectIfSignedIn() {
 
 export default function Home() {
   return (
-    <div className={`lp ${archivo.variable} flex-1`}>
+    <div className="lp flex-1">
       <Suspense>
         <RedirectIfSignedIn />
       </Suspense>

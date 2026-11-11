@@ -22,7 +22,7 @@ async function ResetContent({ params }: Props) {
     <Link href="/recuperar" className="inline-block mt-6 text-accent-ink underline underline-offset-4">Pedir un enlace nuevo</Link>
   </>;
   return <>
-    <h1 className="font-display text-[30px] sm:text-[34px] mb-6">Crea una contraseña nueva</h1>
+    <h1 className="brand-display brand-display-md mb-6">Crea una contraseña nueva</h1>
     <ResetForm token={token} />
   </>;
 }

@@ -94,7 +94,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
             </span>
           )}
         </div>
-        <h1 className="brand-display brand-display-xl brand-shop-name mt-5">{shop.name}</h1>
+        <h1 className="brand-display brand-display-xl lg:text-[44px] mt-5">{shop.name}</h1>
         <div className="mt-5 grid gap-1 text-[15px] text-field-muted">
           {shop.address && (
             <a

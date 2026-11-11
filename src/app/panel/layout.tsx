@@ -11,9 +11,9 @@ import { NotificationBell } from "./notification-bell";
 export default function PanelLayout({ children }: LayoutProps<"/panel">) {
   return (
     <div className="flex-1 flex flex-col">
-      <header className="sticky top-0 z-20 bg-paper/90 backdrop-blur border-b border-line pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-20 bg-field text-field-ink pt-[env(safe-area-inset-top)]">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-6">
-          <Link href="/panel" className="font-display text-lg truncate">
+          <Link href="/panel" className="font-display text-lg truncate rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand">
             <Suspense fallback={<Bar className="h-5 w-32" />}>
               <ShopName />
             </Suspense>
@@ -24,7 +24,7 @@ export default function PanelLayout({ children }: LayoutProps<"/panel">) {
           <div className="ml-auto md:ml-0 flex items-center gap-2">
             <Suspense fallback={null}><SessionNotices /></Suspense>
             <form action={logout}>
-              <button className="press text-sm text-muted hover:text-ink">Salir</button>
+              <button className="press text-sm text-field-muted hover:text-field-ink rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand">Salir</button>
             </form>
           </div>
         </div>

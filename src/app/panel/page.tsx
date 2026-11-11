@@ -87,7 +87,7 @@ async function AgendaPageContent({ searchParams }: PageProps<"/panel">) {
       <div className="flex flex-wrap items-end justify-between gap-4 mb-4">
         <div>
           <p className="text-sm text-muted">{day === today ? "Hoy" : day === addDaysToDay(today, 1, tz) ? "Mañana" : " "}</p>
-          <h1 className="font-display text-[28px] leading-tight tracking-tight first-letter:uppercase">
+          <h1 className="brand-display brand-display-lg">
             {formatDayLong(dayStart, tz)}
           </h1>
         </div>

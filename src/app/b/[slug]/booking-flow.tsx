@@ -352,7 +352,7 @@ export function BookingFlow({
 
       {/* Barra inferior fija con el resumen y el botón de confirmar */}
       {(start || bookingError) && (
-        <div className="fixed inset-x-0 bottom-0 z-10 bg-surface shadow-card rounded-t-[28px] pb-[env(safe-area-inset-bottom)] step-enter">
+        <div className="fixed inset-x-0 bottom-0 z-10 bg-surface shadow-sheet rounded-t-[28px] pb-[env(safe-area-inset-bottom)] step-enter">
           <div className="max-w-[1100px] mx-auto px-5 py-4 grid gap-2">
             {bookingError && <Notice tone="error">{bookingError}</Notice>}
             <div className="flex items-center gap-4">

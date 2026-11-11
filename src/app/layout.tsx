@@ -1,12 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { archivo } from "./_brand/font";
 import "./globals.css";
-
-// Geist: neutra y muy legible en pantallas pequeñas.
-const text = Geist({
-  variable: "--font-text",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: { default: "AppTuServicio · Agenda online para negocios con citas", template: "%s · AppTuServicio" },
@@ -18,15 +12,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#2f72d6" },
-    { media: "(prefers-color-scheme: dark)", color: "#1d4fa8" },
-  ],
+  // Solo tono claro por ahora: la barra del navegador también clara.
+  themeColor: "#eef2f8",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${text.variable} h-full antialiased`}>
+    <html lang="es" className={`${archivo.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

@@ -84,13 +84,13 @@ export function NotificationBell() {
   return (
     <div ref={root} className="md:relative">
       <button ref={trigger} type="button" aria-label={`Avisos, ${data.unread} sin leer`} aria-expanded={open} aria-controls={panelId}
-        onClick={() => setOpen(!open)} className="press relative flex h-11 w-11 items-center justify-center rounded-lg hover:bg-accent-soft focus-visible:outline-2 focus-visible:outline-accent-ink">
+        onClick={() => setOpen(!open)} className="press relative flex h-11 w-11 items-center justify-center rounded-full hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-brand">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
         </svg>
         {data.unread > 0 && <span aria-hidden="true" className="absolute right-0 top-0 min-w-5 rounded-full bg-brand px-1 text-xs font-bold text-brand-ink">{data.unread > 9 ? "9+" : data.unread}</span>}
       </button>
-      {open && <section id={panelId} aria-label="Avisos" className="absolute inset-x-3 top-full mt-2 rounded-2xl border border-line bg-surface shadow-card md:inset-x-auto md:right-0 md:w-96">
+      {open && <section id={panelId} aria-label="Avisos" className="absolute inset-x-3 top-full mt-2 rounded-2xl border border-line bg-surface text-ink shadow-card md:inset-x-auto md:right-0 md:w-96">
         <div className="flex items-center justify-between gap-3 border-b border-line p-4">
           <h2 className="font-semibold">Avisos</h2>
           <button type="button" disabled={busy || data.unread === 0} onClick={() => void mark()} className="press min-h-11 text-sm text-accent-ink disabled:opacity-50">Marcar todos como leídos</button>

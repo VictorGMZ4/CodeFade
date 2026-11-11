@@ -90,7 +90,7 @@ export function PhotoPicker({
         <p className="font-semibold">{label}</p>
         <p className="text-sm text-muted mt-0.5">{hint}</p>
         <div className="flex flex-wrap gap-2 mt-3">
-          <label className={cx("press inline-flex items-center justify-center h-10 px-4 rounded-lg text-[15px] font-semibold cursor-pointer bg-brand text-brand-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-line", pending && "opacity-50 pointer-events-none")}>
+          <label className={cx("press inline-flex items-center justify-center h-10 px-4 rounded-full text-[15px] font-semibold cursor-pointer bg-brand text-brand-ink has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-line", pending && "opacity-50 pointer-events-none")}>
             {pending ? "Guardando…" : url ? "Cambiar foto" : "Subir foto"}
             <input
               ref={input}
@@ -117,7 +117,7 @@ export function PhotoPicker({
               type="button"
               disabled={pending}
               onClick={() => run(remove)}
-              className="press h-10 px-4 rounded-lg text-[15px] font-semibold text-danger hover:bg-danger-soft disabled:opacity-50"
+              className="press h-10 px-4 rounded-full text-[15px] font-semibold text-danger hover:bg-danger-soft disabled:opacity-50"
             >
               Quitar
             </button>

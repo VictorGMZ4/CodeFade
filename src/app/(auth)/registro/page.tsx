@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Crear cuenta" };
 export default function SignupPage(props: PageProps<"/registro">) {
   return (
     <>
-      <h1 className="font-display text-[30px] sm:text-[34px]">Abre tu agenda online</h1>
+      <h1 className="brand-display brand-display-md">Abre tu agenda online</h1>
       <p className="text-[17px] text-muted mt-2 mb-8">
         En unos minutos tendrás un enlace para que tus clientes reserven solos.
       </p>

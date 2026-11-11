@@ -22,9 +22,9 @@ export default function PrivacyPage() {
       <Link href="/" className="press inline-block text-[22px] font-bold tracking-[-0.02em] mb-8">
         AppTu<span className="font-medium text-muted">Servicio</span>
       </Link>
-      <article className="bg-surface rounded-2xl border border-line shadow-soft p-6 sm:p-10 grid gap-6 text-[16px] leading-relaxed [&_h2]:font-display [&_h2]:text-[22px] [&_h2]:mt-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:grid [&_ul]:gap-1.5 [&_p]:text-ink/90">
+      <article className="brand-card p-6 sm:p-10 grid gap-6 text-[16px] leading-relaxed [&_h2]:font-display [&_h2]:text-[22px] [&_h2]:mt-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:grid [&_ul]:gap-1.5 [&_p]:text-ink/90">
         <header>
-          <h1 className="font-display text-[32px] sm:text-[38px] leading-tight">Aviso de privacidad</h1>
+          <h1 className="brand-display brand-display-lg">Aviso de privacidad</h1>
           <p className="text-muted mt-2">Última actualización: {UPDATED}</p>
         </header>
 

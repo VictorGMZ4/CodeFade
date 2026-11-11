@@ -3,13 +3,6 @@
   --series-2: #eb6834;
   --series-3: #1baf7a;
 }
-@media (prefers-color-scheme: dark) {
-  .viz-root {
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-  }
-}
 .viz-root .viz-label { fill: var(--muted); font-size: 12px; }
 .viz-root .viz-target { cursor: pointer; }
 .viz-root .viz-target:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }

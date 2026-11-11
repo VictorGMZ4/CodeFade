@@ -2,15 +2,15 @@ import type { ComponentProps, ReactNode } from "react";
 
 // Piezas de interfaz compartidas. En Tailwind v4 `hover:` ya solo aplica en
 // dispositivos con puntero que puede hacer hover, así que no se queda pegado al tocar.
-// Radios: 8px en botones e inputs, 16px en tarjetas, 24px en paneles grandes.
+// Radios: botones en píldora, 8px en inputs, 16px en tarjetas, 28px en bloques grandes.
 
 export function cx(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
 const buttonStyles = {
-  // Acción principal: azul sólido con texto blanco
-  primary: "bg-brand text-brand-ink hover:shadow-soft hover:brightness-110",
+  // Acción principal: celeste eléctrico con texto azul noche
+  primary: "bg-brand text-brand-ink hover:bg-brand-hover",
   secondary: "bg-surface text-ink border border-line hover:border-accent-line",
   ghost: "text-ink hover:bg-raised",
   danger: "bg-danger-soft text-danger hover:brightness-[0.98]",
@@ -18,7 +18,7 @@ const buttonStyles = {
 
 export function buttonClass(variant: keyof typeof buttonStyles = "primary", extra?: string) {
   return cx(
-    "press inline-flex items-center justify-center gap-2 rounded-lg px-5 h-12 text-[16px] font-semibold",
+    "press inline-flex items-center justify-center gap-2 rounded-full px-5 h-12 text-[16px] font-semibold",
     "disabled:opacity-50 disabled:pointer-events-none",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-line",
     buttonStyles[variant],
@@ -73,8 +73,8 @@ export function PageTitle({ title, description, action }: { title: string; descr
   return (
     <div className="flex items-end justify-between gap-4 mb-6">
       <div>
-        <h1 className="font-display text-[30px] sm:text-[34px]">{title}</h1>
-        {description && <p className="text-muted mt-1">{description}</p>}
+        <h1 className="brand-display brand-display-lg">{title}</h1>
+        {description && <p className="text-muted mt-2">{description}</p>}
       </div>
       {action}
     </div>
