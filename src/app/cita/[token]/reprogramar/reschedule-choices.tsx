@@ -16,10 +16,10 @@ export function ProfessionalChoices({ barbers, currentBarberId, value, onChange 
 }) {
   const choices = [...barbers, { id: "", name: "El primero libre", photoUrl: null }];
   return <section>
-    <h2 id="professional-title" className="font-display text-xl mb-4">Profesional</h2>
+    <h2 id="professional-title" className="brand-display brand-display-sm mb-4">Profesional</h2>
     <div role="radiogroup" aria-labelledby="professional-title" className="grid gap-2">
       {choices.map(b => <label key={b.id} className={cx(
-        "press flex items-center gap-3 rounded-xl border px-4 py-3.5 cursor-pointer min-w-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-line",
+        "press flex items-center gap-3 rounded-[14px] border px-4 py-3.5 cursor-pointer min-w-0 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-line",
         value === b.id ? "bg-brand border-brand text-brand-ink" : "bg-surface border-line hover:border-accent-line",
       )}>
         <input type="radio" name="barber" checked={value === b.id} onChange={() => onChange(b.id)} className="sr-only" />
@@ -44,7 +44,7 @@ export function TimeChoices({ slots, start, timezone, onSelect }: {
       <p className="text-sm font-semibold text-muted mb-2">{group.label}</p>
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
         {group.items.map(iso => <button key={iso} type="button" aria-pressed={start === iso} onClick={() => onSelect(iso)}
-          className={cx("press h-12 rounded-lg border text-base font-semibold tabular-nums focus-visible:outline-2 focus-visible:outline-accent-line",
+          className={cx("press h-12 rounded-full border text-base font-semibold tabular-nums focus-visible:outline-2 focus-visible:outline-accent-line",
             start === iso ? "bg-brand border-brand text-brand-ink" : "border-line text-ink hover:border-accent-line hover:bg-accent-soft")}>
           {timeLabel(iso, timezone)}
         </button>)}

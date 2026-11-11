@@ -32,7 +32,7 @@ async function RescheduleContent({ params }: Props) {
     where: { shopId: a.shopId, active: true }, select: { id: true, name: true, photoUrl: true }, orderBy: { name: "asc" },
   }) : [];
   return <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-12">
-    <h1 className="font-display text-[32px] leading-tight tracking-tight mb-4">Reprogramar tu cita</h1>
+    <h1 className="brand-display brand-display-xl mb-5">Reprogramar tu cita</h1>
     {allowed.ok ? <>
       <p className="text-muted mb-6">Ahora: {formatDayLong(a.startsAt, a.shop.timezone)}, {formatTime(a.startsAt, a.shop.timezone)} · {a.service.name} con {a.barber.name}</p>
       <RescheduleFlow token={token} timezone={a.shop.timezone} currentBarberId={barbers.some((b) => b.id === a.barberId) ? a.barberId : ""} barbers={barbers} />

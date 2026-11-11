@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeleton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card, Notice, buttonClass } from "@/components/ui";
+import { Notice, buttonClass } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
 import { formatDayLong, formatTime } from "@/lib/time";
@@ -52,14 +52,14 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
     <main className="flex-1 w-full max-w-lg mx-auto px-4 pt-[max(2rem,env(safe-area-inset-top))] pb-12">
       {nueva && a.status === "BOOKED" && (
         <div className="step-enter mb-6">
-          <p className="grid place-items-center size-12 rounded-full bg-ok-soft text-ok text-xl mb-4" aria-hidden>
+          <p className="grid place-items-center size-12 rounded-full bg-brand text-brand-ink text-xl font-black mb-5" aria-hidden>
             ✓
           </p>
-          <h1 className="font-display text-[32px] leading-tight tracking-tight">¡Listo!</h1>
-          <p className="text-muted mt-1">Tu cita está reservada. Te enviaremos un recordatorio antes.</p>
+          <h1 className="brand-display brand-display-xl">¡Listo!</h1>
+          <p className="text-muted mt-3">Tu cita está reservada. Te enviaremos un recordatorio antes.</p>
         </div>
       )}
-      {!nueva && <h1 className="font-display text-[32px] leading-tight tracking-tight mb-6">Tu cita</h1>}
+      {!nueva && <h1 className="brand-display brand-display-xl mb-6">Tu cita</h1>}
 
       {a.status === "CANCELLED" && (
         <div className="mb-4">
@@ -69,23 +69,22 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
 
       {cambiada === "1" && a.status === "BOOKED" && <div className="mb-4"><Notice tone="ok">Tu cita se cambió. Te enviaremos el recordatorio con la nueva hora.</Notice></div>}
 
-      <Card className="p-5 grid gap-4">
+      <div className="brand-night p-6 sm:p-8 grid gap-6">
         <div>
-          <p className="text-sm text-muted">{a.shop.name}</p>
-          <p className="text-xl font-medium first-letter:uppercase mt-0.5">
-            {formatDayLong(a.startsAt, tz)}, {formatTime(a.startsAt, tz)}
-          </p>
+          <p className="text-[15px] text-field-muted">{a.shop.name}</p>
+          <p className="brand-display brand-display-md brand-volt-text mt-2">{formatDayLong(a.startsAt, tz)}</p>
+          <p className="brand-display brand-display-xl mt-1 tabular-nums">{formatTime(a.startsAt, tz)}</p>
         </div>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[15px]">
-          <dt className="text-muted">Servicio</dt>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[15px] pt-5 border-t border-field-ink/15">
+          <dt className="text-field-muted">Servicio</dt>
           <dd>{a.service.name}</dd>
-          <dt className="text-muted">Profesional</dt>
+          <dt className="text-field-muted">Profesional</dt>
           <dd>{a.barber.name}</dd>
-          <dt className="text-muted">Precio</dt>
+          <dt className="text-field-muted">Precio</dt>
           <dd className="tabular-nums">{formatPrice(a.priceCents, a.shop.currency)}</dd>
           {a.shop.address && (
             <>
-              <dt className="text-muted">Dirección</dt>
+              <dt className="text-field-muted">Dirección</dt>
               <dd>
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.shop.address)}`}
@@ -99,7 +98,7 @@ async function AppointmentPageContent({ params, searchParams }: PageProps<"/cita
             </>
           )}
         </dl>
-      </Card>
+      </div>
 
       {upcoming && (
         <div className="grid gap-2 mt-4">

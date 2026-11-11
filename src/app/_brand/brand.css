@@ -1,0 +1,77 @@
+/* Páginas del cliente (reserva, cita y reprogramar) con la marca de la portada:
+   azul noche, celeste eléctrico para lo elegido y la acción principal,
+   titulares en bloque (Archivo 900) y botones en píldora.
+   Por ahora siempre en tono claro, aunque el sistema esté en modo oscuro.
+   Se aplica sobre :root para que el fondo de <body> también cambie. */
+:root:has(.brand) {
+  color-scheme: light;
+  --paper: #eef2f8;
+  --surface: #ffffff;
+  --raised: #e3eaf5;
+  --ink: #0b1b3a;
+  --muted: #56657f;
+  --line: #d3ddec;
+  --brand: #6fd0ff; /* celeste eléctrico, con texto azul noche encima */
+  --brand-ink: #0b1b3a;
+  --accent: #dceafe;
+  --accent-ink: #1f5bd8;
+  --accent-soft: #eef4fd;
+  --accent-line: #1f5bd8;
+  --field: #0b1b3a;
+  --field-ink: #ffffff;
+  --field-muted: #b9c8e2;
+  --ok: #1f6b45;
+  --ok-soft: #dcf2e5;
+  --danger: #a3262a;
+  --danger-soft: #fbe3e3;
+  --shadow-card: 0 -6px 24px rgba(11, 27, 58, 0.14);
+  --shadow-soft: none;
+}
+
+.brand {
+  --font-text: var(--font-lp);
+  --brand-volt: #6fd0ff;
+  --brand-volt-hover: #9be0ff;
+  font-family: var(--font-lp), system-ui, sans-serif;
+  letter-spacing: -0.006em;
+}
+.brand :focus-visible { outline-color: var(--accent-line); }
+
+/* Titulares en bloque, como en la portada. */
+.brand-display {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  overflow-wrap: anywhere;
+}
+.brand-display-xl { font-size: clamp(36px, 9vw, 64px); }
+.brand-display-md { font-size: clamp(26px, 5vw, 34px); }
+.brand-display-sm { font-size: clamp(22px, 4vw, 26px); }
+
+/* Botones (buttonClass) y horas en píldora; los campos de texto no cambian. */
+.brand :is(a, button).press.rounded-lg { border-radius: 9999px; }
+.brand :is(a, button).press.bg-brand:hover:not(:disabled) { background: var(--brand-volt-hover); filter: none; }
+
+/* Bloque azul noche: cabecera del negocio y tarjeta de la cita. */
+.brand-night {
+  background: var(--field);
+  color: var(--field-ink);
+  border-radius: 28px;
+}
+.brand-night .brand-display { color: #fff; }
+.brand-night .brand-volt-text { color: var(--brand-volt); }
+.brand-night a:hover { color: var(--field-ink); }
+.brand-night :focus-visible { outline-color: var(--brand-volt); }
+
+/* Tarjetas claras de cada paso. */
+.brand-card { background: var(--surface); border-radius: 28px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .brand .step-enter { transition: none; }
+}
+
+/* En computador la cabecera es una columna estrecha: el nombre, más chico. */
+@media (min-width: 1024px) {
+  .brand-shop-name { font-size: 44px; }
+}

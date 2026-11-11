@@ -260,7 +260,7 @@ export function BookingFlow({
                                 scrollTo(detailsRef);
                               }}
                               className={cx(
-                                "press h-12 rounded-lg border text-[16px] font-semibold tabular-nums",
+                                "press h-12 rounded-full border text-[16px] font-semibold tabular-nums",
                                 start === s
                                   ? "bg-brand border-brand text-brand-ink"
                                   : "border-line text-ink hover:border-accent-line hover:bg-accent-soft",
@@ -352,8 +352,8 @@ export function BookingFlow({
 
       {/* Barra inferior fija con el resumen y el botón de confirmar */}
       {(start || bookingError) && (
-        <div className="fixed inset-x-0 bottom-0 z-10 bg-surface border-t border-line shadow-card pb-[env(safe-area-inset-bottom)] step-enter">
-          <div className="max-w-[1100px] mx-auto px-4 py-3 grid gap-2">
+        <div className="fixed inset-x-0 bottom-0 z-10 bg-surface shadow-card rounded-t-[28px] pb-[env(safe-area-inset-bottom)] step-enter">
+          <div className="max-w-[1100px] mx-auto px-5 py-4 grid gap-2">
             {bookingError && <Notice tone="error">{bookingError}</Notice>}
             <div className="flex items-center gap-4">
               <p className="flex-1 min-w-0 text-[15px] font-semibold leading-snug first-letter:uppercase">{summary}</p>
@@ -368,11 +368,11 @@ export function BookingFlow({
   );
 }
 
-/** Calendario mensual: los días con hueco se pueden elegir, el resto se ven apagados. */
+/** Tarjeta de cada paso, con el titular en bloque de la marca. */
 function Step({ title, titleId, children, ref }: { title: string; titleId?: string; children: React.ReactNode; ref?: React.Ref<HTMLElement> }) {
   return (
-    <section ref={ref} className="step-enter scroll-mt-4 min-w-0 bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7">
-      <h2 id={titleId} className="font-display text-[20px] mb-4">{title}</h2>
+    <section ref={ref} className="step-enter scroll-mt-4 min-w-0 brand-card p-5 sm:p-8">
+      <h2 id={titleId} className="brand-display brand-display-md mb-5">{title}</h2>
       {children}
     </section>
   );
@@ -395,9 +395,9 @@ function Choice({
     <label
       className={cx(
         className,
-        "press flex items-center gap-3 rounded-xl border px-4 py-3.5 cursor-pointer min-w-0",
+        "press flex items-center gap-3 rounded-[14px] border px-4 py-3.5 cursor-pointer min-w-0",
         "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-line",
-        checked ? "bg-brand border-brand text-brand-ink [&_.text-muted]:text-brand-ink/85" : "bg-surface border-line hover:border-accent-line",
+        checked ? "bg-brand border-brand text-brand-ink [&_.text-muted]:text-brand-ink/75" : "bg-surface border-line hover:border-accent-line",
       )}
     >
       <input type="radio" name={name} checked={checked} onChange={onChange} className="sr-only" />

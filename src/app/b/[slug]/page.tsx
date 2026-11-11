@@ -64,7 +64,7 @@ function HoursList({ hours }: { hours: { weekday: number; text: string }[] }) {
       {hours.map((h) => (
         <div key={h.weekday} className="contents">
           <dt>{WEEKDAYS[h.weekday]}</dt>
-          <dd className={h.text === "Cerrado" ? "text-muted/70" : "text-muted"}>{h.text}</dd>
+          <dd className={h.text === "Cerrado" ? "text-field-muted/70" : "text-field-muted"}>{h.text}</dd>
         </div>
       ))}
     </dl>
@@ -82,45 +82,45 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
 
   return (
     <main className="flex-1 w-full max-w-[1100px] mx-auto px-3 sm:px-6 pt-[max(1rem,env(safe-area-inset-top))] lg:pt-10 lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:gap-8 lg:items-start">
-      <header className="bg-surface rounded-2xl border border-line shadow-soft overflow-hidden lg:sticky lg:top-6 mb-4 lg:mb-0">
+      <header className="brand-night overflow-hidden lg:sticky lg:top-6 mb-4 lg:mb-0">
         {shop.coverUrl && <Img src={shop.coverUrl} alt="" loading="eager" className="w-full aspect-[8/3]" />}
         <div className="p-5 sm:p-7">
         <div className="flex items-center gap-3">
           {shop.logoUrl ? (
-            <Img src={shop.logoUrl} alt={`Logo de ${shop.name}`} loading="eager" className={shop.coverUrl ? "size-16 shrink-0 rounded-2xl border-4 border-surface -mt-12 shadow-soft" : "size-12 shrink-0 rounded-xl"} />
+            <Img src={shop.logoUrl} alt={`Logo de ${shop.name}`} loading="eager" className={shop.coverUrl ? "size-16 shrink-0 rounded-2xl border-4 border-field -mt-12" : "size-12 shrink-0 rounded-xl"} />
           ) : (
-            <span aria-hidden className="grid place-items-center size-12 shrink-0 rounded-xl bg-brand text-brand-ink text-[20px] font-bold">
+            <span aria-hidden className="grid place-items-center size-12 shrink-0 rounded-full bg-brand text-brand-ink text-[22px] font-black">
               {shop.name.slice(0, 1)}
             </span>
           )}
-          <h1 className="font-display text-[24px] sm:text-[28px] leading-tight">{shop.name}</h1>
         </div>
-        <div className="mt-4 grid gap-1 text-[15px]">
+        <h1 className="brand-display brand-display-xl brand-shop-name mt-5">{shop.name}</h1>
+        <div className="mt-5 grid gap-1 text-[15px] text-field-muted">
           {shop.address && (
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.address)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="press text-muted hover:text-accent-ink underline underline-offset-4 decoration-line"
+              className="press hover:text-field-ink underline underline-offset-4 decoration-field-muted/40 w-fit"
             >
               {shop.address}
             </a>
           )}
           {shop.phone && (
-            <a href={`tel:${shop.phone}`} className="press text-muted hover:text-accent-ink underline underline-offset-4 decoration-line">
+            <a href={`tel:${shop.phone}`} className="press hover:text-field-ink underline underline-offset-4 decoration-field-muted/40 w-fit">
               {shop.phone}
             </a>
           )}
         </div>
         {/* En el móvil el horario se pliega para llegar antes a la reserva */}
         <details className="mt-4 lg:hidden group">
-          <summary className="press text-[15px] font-semibold text-accent-ink cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <summary className="press brand-volt-text text-[15px] font-semibold cursor-pointer list-none w-fit [&::-webkit-details-marker]:hidden">
             Ver horario <span className="group-open:hidden">›</span>
           </summary>
           <HoursList hours={hours} />
         </details>
-        <div className="hidden lg:block mt-6 pt-5 border-t border-line">
-          <p className="text-[15px] font-semibold">Horario</p>
+        <div className="hidden lg:block mt-6 pt-5 border-t border-field-ink/15">
+          <p className="brand-volt-text text-[15px] font-semibold">Horario</p>
           <HoursList hours={hours} />
         </div>
         </div>
@@ -141,7 +141,7 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
             timezone={shop.timezone}
           />
         ) : (
-          <p className="bg-surface rounded-2xl border border-line p-6">
+          <p className="brand-card p-6 sm:p-8">
             Este negocio todavía no tiene reservas online disponibles.
             {shop.phone && (
               <>
@@ -156,12 +156,12 @@ async function BookingPageContent({ params, searchParams }: PageProps<"/b/[slug]
           </p>
         )}
         {shop.photos.length > 0 && (
-          <section className="relative bg-surface rounded-2xl border border-line shadow-soft p-5 sm:p-7 -mt-28" aria-labelledby="trabajos">
-            <h2 id="trabajos" className="font-display text-[22px]">Nuestros trabajos</h2>
+          <section className="relative brand-card p-5 sm:p-8 -mt-28" aria-labelledby="trabajos">
+            <h2 id="trabajos" className="brand-display brand-display-md">Nuestros trabajos</h2>
             <ul className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
               {shop.photos.map((p) => (
                 <li key={p.id}>
-                  <Img src={p.url} alt={`Trabajo de ${shop.name}`} className="aspect-square w-full rounded-xl" />
+                  <Img src={p.url} alt={`Trabajo de ${shop.name}`} className="aspect-square w-full rounded-[10px]" />
                 </li>
               ))}
             </ul>

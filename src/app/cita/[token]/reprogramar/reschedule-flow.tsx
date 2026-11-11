@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Card, Notice, buttonClass } from "@/components/ui";
+import { Notice, buttonClass } from "@/components/ui";
 import { MonthCalendar, SkeletonGrid } from "@/app/b/[slug]/month-calendar";
 import { rescheduleByToken } from "../actions";
 import { useRescheduleAvailability } from "./use-reschedule-availability";
@@ -30,12 +30,12 @@ export function RescheduleFlow({ token, timezone, currentBarberId, barbers }: {
     {/* Solo se bloquea al guardar: mientras cargan los horarios se puede cambiar
         de profesional o de día (las respuestas viejas se descartan) sin perder el foco. */}
     <fieldset disabled={pending} className="grid gap-4 min-w-0" aria-busy={busy}>
-      <Card className="p-5"><ProfessionalChoices barbers={barbers} currentBarberId={currentBarberId} value={a.barberId}
-        onChange={id => { setError(""); a.loadDays(id); }} /></Card>
-      <Card className="p-5 grid gap-4">
-        <h2 className="font-display text-xl">Fecha y hora</h2>
+      <div className="brand-card p-5 sm:p-7"><ProfessionalChoices barbers={barbers} currentBarberId={currentBarberId} value={a.barberId}
+        onChange={id => { setError(""); a.loadDays(id); }} /></div>
+      <div className="brand-card p-5 sm:p-7 grid gap-4">
+        <h2 className="brand-display brand-display-sm">Fecha y hora</h2>
         <AvailabilityChoices availability={a} timezone={timezone} onSelect={start => { a.patch({ start }); setError(""); }} />
-      </Card>
+      </div>
       <button type="submit" disabled={busy || !a.start} className={buttonClass("primary", "w-full h-auto min-h-12 py-3")}>
         {pending ? "Cambiando tu cita…" : a.day && a.start ? `Cambiar a ${dayLabel(a.day)}, ${timeLabel(a.start, timezone)}` : "Elige fecha y hora"}
       </button>
